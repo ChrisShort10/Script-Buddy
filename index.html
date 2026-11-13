@@ -44,7 +44,7 @@
 </head>
 <body class="min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
 
-  <!-- Floating Selection Toolbar (onmousedown preventDefault keeps selection alive) -->
+  <!-- Floating Selection Toolbar -->
   <div id="selectionToolbar" onmousedown="event.preventDefault()">
     <button type="button" onclick="applyInlineStyle('hl-yellow')" class="w-6 h-6 rounded bg-yellow-400 hover:scale-110 transition-transform" title="Highlight Yellow"></button>
     <button type="button" onclick="applyInlineStyle('hl-cyan')" class="w-6 h-6 rounded bg-cyan-400 hover:scale-110 transition-transform" title="Highlight Cyan"></button>
@@ -52,16 +52,18 @@
     <button type="button" onclick="applyInlineStyle('strikethrough')" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold line-through" title="Strikethrough Selection">S</button>
     <button type="button" onclick="clearSelectionFormatting()" class="px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-[11px]" title="Clear Formatting">✕</button>
     <div class="h-4 w-px bg-zinc-700 mx-0.5"></div>
-    <button type="button" onclick="speakSelection()" class="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1">🔊 UK</button>
+    <button type="button" onclick="speakSelection()" class="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1" title="Pronounce in UK English">🔊 UK</button>
+    <button type="button" onclick="lookupSelectionInDock()" class="px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold flex items-center gap-1" title="Search Selection in Studio Research">🔍 Lookup</button>
   </div>
 
   <!-- Top SaaS Control Bar -->
   <header class="sticky top-0 z-30 bg-zinc-950/95 backdrop-blur border-b border-zinc-800 px-5 py-3 flex flex-wrap items-center justify-between gap-4">
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-2.5">
       <span class="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
       <select id="showSelector" onchange="switchShow(this.value)" class="bg-zinc-900 border border-zinc-700 text-zinc-100 font-bold px-3 py-1.5 rounded-lg text-sm focus:outline-none focus:border-indigo-500">
         <!-- Populated dynamically -->
       </select>
+      <button onclick="openShowManagerModal()" class="px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 font-medium" title="Manage, Clone, Rename, or Delete Shows">Manage Shows</button>
       <span id="syncBadge" class="text-[11px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 mono">LOCAL</span>
     </div>
 
@@ -70,14 +72,14 @@
       <div><span class="text-zinc-500">SCRIPT:</span> <span id="timeTotal" class="text-zinc-200 font-bold">0:00</span></div>
       <div><span class="text-zinc-500">TARGET:</span> <span id="timeTarget" class="text-indigo-400 font-bold">1h</span></div>
       <div><span class="text-zinc-500">DELTA:</span> <span id="timeDelta" class="text-emerald-400 font-bold">On Pace</span></div>
-      <div class="hidden sm:block text-zinc-400">| CLOCK: <span id="liveClock" class="text-zinc-200 font-bold">00:00:00</span></div>
+      <div class="hidden lg:block text-zinc-400">| CLOCK: <span id="liveClock" class="text-zinc-200 font-bold">00:00:00</span></div>
     </div>
 
     <!-- Pro Tools & Actions -->
     <div class="flex items-center gap-2">
+      <button onclick="toggleResearchDock()" class="px-3 py-1.5 rounded bg-emerald-950/70 hover:bg-emerald-900/80 border border-emerald-700/70 text-xs text-emerald-300 font-semibold">🌐 Research & News</button>
       <button onclick="toggleScratchpad()" class="px-3 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 font-medium">Scratchpad</button>
       <button onclick="window.print()" class="px-3 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 font-medium hidden sm:inline-block">Print PDF</button>
-      <button onclick="openNewShowModal()" class="px-3 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 font-medium">+ New Show</button>
       <button onclick="openBlockModal('add')" class="px-3.5 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-sm">+ Add Block</button>
     </div>
   </header>
@@ -96,7 +98,7 @@
         <button onclick="insertCueToModal('[TIME CHECK]')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[TIME CHECK]</button>
         <button onclick="insertCueToModal('[OUTRO]')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[OUTRO]</button>
       </div>
-      <div class="text-zinc-500 text-[11px] hidden md:block">Highlight words for UK TTS or granular styling &bull; Click Blackout to discard block</div>
+      <div class="text-zinc-500 text-[11px] hidden md:block">Highlight words for UK TTS, Lookup, or styling &bull; Blackout to discard block</div>
     </div>
 
     <!-- Script Blocks Container -->
@@ -104,6 +106,49 @@
       <!-- Rendered dynamically -->
     </div>
   </main>
+
+  <!-- Live Internet Research & News Dock (Slide-Over Drawer) -->
+  <div id="researchDrawer" class="fixed right-0 top-0 h-full w-full sm:w-[440px] bg-zinc-950 border-l border-zinc-800 z-40 p-5 shadow-2xl transform translate-x-full transition-transform duration-200 flex flex-col">
+    <div class="flex justify-between items-center pb-3 border-b border-zinc-800">
+      <div>
+        <h3 class="font-bold text-sm text-zinc-100 flex items-center gap-2">🌐 Studio Research & Live News</h3>
+        <p class="text-[11px] text-zinc-500">Pull facts, song info, Wiki bios, or headlines straight into blocks</p>
+      </div>
+      <button onclick="toggleResearchDock()" class="text-zinc-400 hover:text-white text-xl px-2">&times;</button>
+    </div>
+
+    <!-- Plugin Mode Tabs -->
+    <div class="grid grid-cols-4 gap-1.5 my-3 bg-zinc-900 p-1 rounded-lg border border-zinc-800 text-xs font-semibold">
+      <button id="tab_ai" onclick="switchResearchTab('ai')" class="py-1.5 rounded bg-indigo-600 text-white">AI Overview</button>
+      <button id="tab_song" onclick="switchResearchTab('song')" class="py-1.5 rounded text-zinc-400 hover:text-zinc-200">Song Info</button>
+      <button id="tab_wiki" onclick="switchResearchTab('wiki')" class="py-1.5 rounded text-zinc-400 hover:text-zinc-200">Wikipedia</button>
+      <button id="tab_news" onclick="switchResearchTab('news')" class="py-1.5 rounded text-zinc-400 hover:text-zinc-200">Live News</button>
+    </div>
+
+    <!-- Search Input Area (AI, Song, Wiki) -->
+    <div id="researchSearchBox" class="space-y-2 mb-3">
+      <div class="flex gap-2">
+        <input id="researchQueryInput" type="text" onkeydown="if(event.key==='Enter') runResearchPlugin()" placeholder="Search topic, band, or track..." class="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
+        <button onclick="runResearchPlugin()" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold">Search</button>
+      </div>
+    </div>
+
+    <!-- News Category Selector (Visible only in News tab) -->
+    <div id="newsCategoryBox" class="hidden space-y-2 mb-3">
+      <div class="flex gap-1.5">
+        <button onclick="loadNewsFeed('general')" id="news_btn_general" class="flex-1 py-1.5 rounded bg-zinc-800 border border-zinc-700 text-xs text-zinc-200 font-semibold">World News</button>
+        <button onclick="loadNewsFeed('showbiz')" id="news_btn_showbiz" class="flex-1 py-1.5 rounded bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 hover:text-zinc-200">Showbiz & TV</button>
+        <button onclick="loadNewsFeed('music')" id="news_btn_music" class="flex-1 py-1.5 rounded bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 hover:text-zinc-200">Music News</button>
+      </div>
+    </div>
+
+    <!-- Plugin Results Feed -->
+    <div id="researchResults" class="flex-1 overflow-y-auto space-y-3 pr-1 text-sm">
+      <div class="text-center text-zinc-500 text-xs py-10">
+        Select a plugin tab above and search, or highlight any word in your script and hit <strong class="text-emerald-400">🔍 Lookup</strong>.
+      </div>
+    </div>
+  </div>
 
   <!-- Scratchpad Drawer -->
   <div id="scratchpadDrawer" class="fixed right-0 top-0 h-full w-80 bg-zinc-950 border-l border-zinc-800 z-40 p-5 shadow-2xl transform translate-x-full transition-transform duration-200 flex flex-col">
@@ -113,6 +158,41 @@
     </div>
     <textarea id="scratchpadText" oninput="saveScratchpad()" placeholder="Jot down caller names, competition winners, contest codes, or reminders here..." class="w-full flex-1 bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500 font-mono resize-none"></textarea>
     <div class="text-[11px] text-zinc-500 mt-2">Auto-saves to browser storage.</div>
+  </div>
+
+  <!-- Show & Group Manager Modal -->
+  <div id="showManagerModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-zinc-900 border border-zinc-700 rounded-xl max-w-2xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] flex flex-col">
+      <div class="flex justify-between items-center border-b border-zinc-800 pb-3">
+        <div>
+          <h2 class="text-lg font-bold text-white">Show & Group Manager</h2>
+          <p class="text-xs text-zinc-400">Create, rename, clone templates, adjust target hours, or delete shows</p>
+        </div>
+        <button onclick="closeShowManagerModal()" class="text-zinc-400 hover:text-white text-xl">&times;</button>
+      </div>
+
+      <!-- Create New Show Form -->
+      <div class="bg-zinc-950 border border-zinc-800 p-3.5 rounded-xl flex flex-wrap sm:flex-nowrap items-end gap-2.5">
+        <div class="flex-1 w-full">
+          <label class="block text-[11px] text-zinc-400 mb-1">New Show Name</label>
+          <input id="mgrNewShowName" type="text" placeholder="e.g., Friday Rock & Metal Show" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
+        </div>
+        <div class="w-28">
+          <label class="block text-[11px] text-zinc-400 mb-1">Hours</label>
+          <input id="mgrNewShowHours" type="number" step="0.5" min="0.5" value="2" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
+        </div>
+        <button onclick="createShowFromManager()" class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white shrink-0">+ Create</button>
+      </div>
+
+      <!-- Existing Shows List -->
+      <div id="showManagerList" class="flex-1 overflow-y-auto space-y-2.5 pr-1">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <div class="flex justify-end pt-2 border-t border-zinc-800">
+        <button onclick="closeShowManagerModal()" class="px-4 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm text-zinc-200">Done</button>
+      </div>
+    </div>
   </div>
 
   <!-- Add / Edit Block Modal -->
@@ -129,28 +209,6 @@
       <div class="flex justify-end gap-2 pt-2">
         <button onclick="closeBlockModal()" class="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm text-zinc-300">Cancel</button>
         <button onclick="saveBlockModalData()" class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white">Save Block</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- New Show Modal -->
-  <div id="showModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-zinc-900 border border-zinc-700 rounded-xl max-w-md w-full p-6 shadow-2xl space-y-4">
-      <div class="flex justify-between items-center">
-        <h2 class="text-lg font-bold text-white">Create New Broadcast Show</h2>
-        <button onclick="closeNewShowModal()" class="text-zinc-400 hover:text-white text-xl">&times;</button>
-      </div>
-      <div>
-        <label class="block text-xs text-zinc-400 mb-1">Show Name</label>
-        <input id="newShowName" type="text" placeholder="e.g., Hits of the 80s & 90s" class="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
-      </div>
-      <div>
-        <label class="block text-xs text-zinc-400 mb-1">Target Duration (Hours)</label>
-        <input id="newShowHours" type="number" step="0.5" value="1" class="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
-      </div>
-      <div class="flex justify-end gap-2 pt-2">
-        <button onclick="closeNewShowModal()" class="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm text-zinc-300">Cancel</button>
-        <button onclick="createNewShow()" class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white">Create Show</button>
       </div>
     </div>
   </div>
@@ -186,8 +244,9 @@
     let activeRange = null;
     let savedSelectedText = "";
     let cachedVoices = [];
+    let currentResearchTab = "ai";
 
-    // Preload voices so UK English is immediately ready on first click
+    // Preload UK English TTS Voices
     function loadVoices() {
       if ('speechSynthesis' in window) {
         cachedVoices = window.speechSynthesis.getVoices();
@@ -202,7 +261,9 @@
       document.getElementById("liveClock").textContent = new Date().toTimeString().split(" ")[0];
     }, 1000);
 
-    // Position and show the floating toolbar whenever text inside a script block is selected
+    // =========================================================================
+    // FLOATING SELECTION TOOLBAR (HIGHLIGHT, STRIKE, UK TTS, LOOKUP)
+    // =========================================================================
     function updateSelectionToolbar() {
       const toolbar = document.getElementById("selectionToolbar");
       const selection = window.getSelection();
@@ -228,7 +289,7 @@
 
       const rect = range.getBoundingClientRect();
       const topPos = Math.max(10, window.scrollY + rect.top - 48);
-      const leftPos = Math.max(10, Math.min(window.innerWidth - 240, window.scrollX + rect.left + (rect.width / 2) - 110));
+      const leftPos = Math.max(10, Math.min(window.innerWidth - 310, window.scrollX + rect.left + (rect.width / 2) - 140));
 
       toolbar.style.top = `${topPos}px`;
       toolbar.style.left = `${leftPos}px`;
@@ -241,7 +302,6 @@
 
     function applyInlineStyle(styleClass) {
       if (!activeRange) return;
-
       const span = document.createElement("span");
       span.className = styleClass;
 
@@ -249,7 +309,7 @@
         span.appendChild(activeRange.extractContents());
         activeRange.insertNode(span);
       } catch (e) {
-        console.warn("Could not wrap complex cross-tag selection:", e);
+        console.warn("Could not wrap selection:", e);
       }
 
       window.getSelection().removeAllRanges();
@@ -290,6 +350,22 @@
       }
     }
 
+    function lookupSelectionInDock() {
+      const query = savedSelectedText || window.getSelection().toString().trim();
+      if (!query) return;
+      document.getElementById("selectionToolbar").style.display = "none";
+
+      const drawer = document.getElementById("researchDrawer");
+      if (drawer.classList.contains("translate-x-full")) {
+        toggleResearchDock();
+      }
+      if (currentResearchTab === "news") {
+        switchResearchTab("ai");
+      }
+      document.getElementById("researchQueryInput").value = query;
+      runResearchPlugin();
+    }
+
     function persistBlockChanges() {
       const show = appState.shows.find(s => s.id === appState.activeShowId);
       document.querySelectorAll(".script-text-area").forEach(el => {
@@ -311,6 +387,9 @@
       }
     }
 
+    // =========================================================================
+    // MAIN RENDERER
+    // =========================================================================
     function render() {
       const selector = document.getElementById("showSelector");
       selector.innerHTML = "";
@@ -323,6 +402,8 @@
       });
 
       const currentShow = appState.shows.find(s => s.id === appState.activeShowId) || appState.shows[0];
+      if (!currentShow) return;
+      appState.activeShowId = currentShow.id;
       document.getElementById("timeTarget").textContent = currentShow.targetHours + "h";
 
       const container = document.getElementById("blocksContainer");
@@ -330,37 +411,44 @@
 
       let totalWords = 0;
 
-      currentShow.blocks.forEach((block, idx) => {
-        const tempDiv = document.createElement("div");
-        tempDiv.innerHTML = block.html;
-        // Exclude cue tags and strikethrough spans from spoken word count
-        tempDiv.querySelectorAll(".cue-tag, .strikethrough").forEach(el => el.remove());
-        const cleanText = (tempDiv.textContent || tempDiv.innerText || "").trim();
-        const words = cleanText ? cleanText.split(/\s+/).length : 0;
-        if (!block.blackout) totalWords += words;
-        const blockSecs = Math.round((words / WPM) * 60);
-
-        const card = document.createElement("div");
-        card.className = `script-block group relative p-4 rounded-xl bg-zinc-900/80 border border-zinc-800 transition-all ${block.blackout ? 'block-blackout' : ''}`;
-
-        card.innerHTML = `
-          <div class="flex items-start justify-between gap-4">
-            <div class="script-text-area flex-1 text-[19px] leading-relaxed outline-none cursor-text" data-id="${block.id}">${block.html}</div>
-            <div class="flex items-center gap-1 opacity-30 group-hover:opacity-100 transition-opacity shrink-0">
-              <button title="Blackout / Discard Block" onclick="toggleBlackout(${block.id})" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded text-xs font-semibold">${block.blackout ? 'Restore' : 'Blackout'}</button>
-              <button title="Edit Block Text" onclick="openBlockModal('edit', ${block.id})" class="px-2 py-1 bg-zinc-800 text-indigo-400 rounded text-xs font-semibold">Edit</button>
-              <button title="Move Up" onclick="moveBlock(${block.id}, -1)" class="px-1.5 py-1 bg-zinc-800 text-zinc-300 rounded text-xs">▲</button>
-              <button title="Move Down" onclick="moveBlock(${block.id}, 1)" class="px-1.5 py-1 bg-zinc-800 text-zinc-300 rounded text-xs">▼</button>
-              <button title="Delete" onclick="deleteBlock(${block.id})" class="px-1.5 py-1 bg-red-950/60 text-red-400 rounded text-xs ml-1">🗑</button>
-            </div>
-          </div>
-          <div class="mt-2.5 pt-2 border-t border-zinc-800/60 flex items-center justify-between text-[11px] mono text-zinc-500">
-            <span>BLOCK #${idx + 1} &bull; EST. <strong class="text-zinc-400">${blockSecs}s</strong> (${words} words)</span>
-            <span class="text-zinc-400">Select words to highlight, strike, or hear UK TTS</span>
+      if (!currentShow.blocks || currentShow.blocks.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12 border border-dashed border-zinc-800 rounded-xl text-zinc-500 text-sm">
+            No script blocks in <strong>${currentShow.title}</strong> yet. Click <strong>+ Add Block</strong> or pull stories from <strong>🌐 Research & News</strong>.
           </div>
         `;
-        container.appendChild(card);
-      });
+      } else {
+        currentShow.blocks.forEach((block, idx) => {
+          const tempDiv = document.createElement("div");
+          tempDiv.innerHTML = block.html;
+          tempDiv.querySelectorAll(".cue-tag, .strikethrough").forEach(el => el.remove());
+          const cleanText = (tempDiv.textContent || tempDiv.innerText || "").trim();
+          const words = cleanText ? cleanText.split(/\s+/).length : 0;
+          if (!block.blackout) totalWords += words;
+          const blockSecs = Math.round((words / WPM) * 60);
+
+          const card = document.createElement("div");
+          card.className = `script-block group relative p-4 rounded-xl bg-zinc-900/80 border border-zinc-800 transition-all ${block.blackout ? 'block-blackout' : ''}`;
+
+          card.innerHTML = `
+            <div class="flex items-start justify-between gap-4">
+              <div class="script-text-area flex-1 text-[19px] leading-relaxed outline-none cursor-text" data-id="${block.id}">${block.html}</div>
+              <div class="flex items-center gap-1 opacity-30 group-hover:opacity-100 transition-opacity shrink-0">
+                <button title="Blackout / Discard Block" onclick="toggleBlackout(${block.id})" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded text-xs font-semibold">${block.blackout ? 'Restore' : 'Blackout'}</button>
+                <button title="Edit Block Text" onclick="openBlockModal('edit', ${block.id})" class="px-2 py-1 bg-zinc-800 text-indigo-400 rounded text-xs font-semibold">Edit</button>
+                <button title="Move Up" onclick="moveBlock(${block.id}, -1)" class="px-1.5 py-1 bg-zinc-800 text-zinc-300 rounded text-xs">▲</button>
+                <button title="Move Down" onclick="moveBlock(${block.id}, 1)" class="px-1.5 py-1 bg-zinc-800 text-zinc-300 rounded text-xs">▼</button>
+                <button title="Delete" onclick="deleteBlock(${block.id})" class="px-1.5 py-1 bg-red-950/60 text-red-400 rounded text-xs ml-1">🗑</button>
+              </div>
+            </div>
+            <div class="mt-2.5 pt-2 border-t border-zinc-800/60 flex items-center justify-between text-[11px] mono text-zinc-500">
+              <span>BLOCK #${idx + 1} &bull; EST. <strong class="text-zinc-400">${blockSecs}s</strong> (${words} words)</span>
+              <span class="text-zinc-400">Select words for UK TTS, Lookup, or styling</span>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      }
 
       const totalSecs = Math.round((totalWords / WPM) * 60);
       document.getElementById("timeTotal").textContent = formatTime(totalSecs);
@@ -389,12 +477,368 @@
       return `${m}:${s < 10 ? "0" : ""}${s}`;
     }
 
+    // =========================================================================
+    // SHOW & GROUP MANAGER
+    // =========================================================================
     function switchShow(showId) {
       appState.activeShowId = showId;
       saveAndSync();
       render();
     }
 
+    function openShowManagerModal() {
+      renderShowManagerList();
+      document.getElementById("showManagerModal").classList.remove("hidden");
+    }
+
+    function closeShowManagerModal() {
+      document.getElementById("showManagerModal").classList.add("hidden");
+    }
+
+    function renderShowManagerList() {
+      const list = document.getElementById("showManagerList");
+      list.innerHTML = "";
+
+      appState.shows.forEach(show => {
+        const isActive = show.id === appState.activeShowId;
+        const blockCount = show.blocks ? show.blocks.length : 0;
+
+        const row = document.createElement("div");
+        row.className = `p-3.5 rounded-xl border ${isActive ? 'bg-indigo-950/20 border-indigo-500/50' : 'bg-zinc-950 border-zinc-800'} flex flex-wrap sm:flex-nowrap items-center justify-between gap-3`;
+        row.innerHTML = `
+          <div class="flex-1 min-w-[200px] space-y-1.5">
+            <div class="flex items-center gap-2">
+              <input type="text" value="${show.title.replace(/"/g, '&quot;')}" onchange="updateShowMeta('${show.id}', 'title', this.value)" class="bg-zinc-900 border border-zinc-700 rounded px-2.5 py-1 text-sm font-bold text-zinc-100 w-full focus:outline-none focus:border-indigo-500" />
+            </div>
+            <div class="flex items-center gap-3 text-xs text-zinc-400">
+              <label class="flex items-center gap-1">
+                Target Hours:
+                <input type="number" step="0.5" min="0.5" value="${show.targetHours}" onchange="updateShowMeta('${show.id}', 'targetHours', this.value)" class="w-16 bg-zinc-900 border border-zinc-700 rounded px-2 py-0.5 text-zinc-200 mono" />
+              </label>
+              <span>&bull; ${blockCount} block${blockCount === 1 ? '' : 's'}</span>
+              ${isActive ? '<span class="text-emerald-400 font-semibold">&bull; Active</span>' : ''}
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            ${!isActive ? `<button onclick="switchShow('${show.id}'); renderShowManagerList();" class="px-2.5 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-200 font-medium">Open</button>` : ''}
+            <button onclick="duplicateShow('${show.id}')" class="px-2.5 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-xs text-indigo-300 font-medium" title="Clone Show & Blocks">Clone</button>
+            <button onclick="clearShowBlocks('${show.id}')" class="px-2.5 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-xs text-amber-300 font-medium" title="Clear All Blocks in Show">Clear</button>
+            <button onclick="deleteShow('${show.id}')" class="px-2.5 py-1.5 rounded bg-red-950/70 hover:bg-red-900 text-xs text-red-300 font-semibold" title="Delete Show">Delete</button>
+          </div>
+        `;
+        list.appendChild(row);
+      });
+    }
+
+    function createShowFromManager() {
+      const nameInput = document.getElementById("mgrNewShowName");
+      const hoursInput = document.getElementById("mgrNewShowHours");
+      const name = nameInput.value.trim();
+      const hours = parseFloat(hoursInput.value) || 1;
+      if (!name) return;
+
+      const newId = "show_" + Date.now();
+      appState.shows.push({
+        id: newId,
+        title: name,
+        targetHours: hours,
+        blocks: [{ id: Date.now(), html: `<span class="cue-tag">[INTRO]</span> Welcome to ${name}`, blackout: false }]
+      });
+      appState.activeShowId = newId;
+      nameInput.value = "";
+      saveAndSync();
+      render();
+      renderShowManagerList();
+    }
+
+    function updateShowMeta(showId, field, value) {
+      const show = appState.shows.find(s => s.id === showId);
+      if (!show) return;
+      if (field === "title" && value.trim()) {
+        show.title = value.trim();
+      } else if (field === "targetHours") {
+        show.targetHours = Math.max(0.5, parseFloat(value) || 1);
+      }
+      saveAndSync();
+      render();
+    }
+
+    function duplicateShow(showId) {
+      const source = appState.shows.find(s => s.id === showId);
+      if (!source) return;
+      const clonedBlocks = (source.blocks || []).map((b, i) => ({
+        id: Date.now() + i,
+        html: b.html,
+        blackout: false
+      }));
+      const newId = "show_" + (Date.now() + 99);
+      appState.shows.push({
+        id: newId,
+        title: `${source.title} (Copy)`,
+        targetHours: source.targetHours,
+        blocks: clonedBlocks
+      });
+      appState.activeShowId = newId;
+      saveAndSync();
+      render();
+      renderShowManagerList();
+    }
+
+    function clearShowBlocks(showId) {
+      const show = appState.shows.find(s => s.id === showId);
+      if (!show) return;
+      if (!confirm(`Clear all script blocks from "${show.title}"?`)) return;
+      show.blocks = [];
+      saveAndSync();
+      render();
+      renderShowManagerList();
+    }
+
+    function deleteShow(showId) {
+      if (appState.shows.length <= 1) {
+        alert("You must keep at least one show in the studio.");
+        return;
+      }
+      const show = appState.shows.find(s => s.id === showId);
+      if (!confirm(`Permanently delete "${show ? show.title : 'this show'}"?`)) return;
+
+      appState.shows = appState.shows.filter(s => s.id !== showId);
+      if (appState.activeShowId === showId) {
+        appState.activeShowId = appState.shows[0].id;
+      }
+      saveAndSync();
+      render();
+      renderShowManagerList();
+    }
+
+    // =========================================================================
+    // LIVE INTERNET RESEARCH & NEWS PLUGINS
+    // =========================================================================
+    function toggleResearchDock() {
+      const drawer = document.getElementById("researchDrawer");
+      document.getElementById("scratchpadDrawer").classList.add("translate-x-full");
+      drawer.classList.toggle("translate-x-full");
+    }
+
+    function switchResearchTab(tab) {
+      currentResearchTab = tab;
+      ["ai", "song", "wiki", "news"].forEach(t => {
+        const btn = document.getElementById("tab_" + t);
+        btn.className = t === tab
+          ? "py-1.5 rounded bg-indigo-600 text-white"
+          : "py-1.5 rounded text-zinc-400 hover:text-zinc-200";
+      });
+
+      const searchBox = document.getElementById("researchSearchBox");
+      const newsBox = document.getElementById("newsCategoryBox");
+      const input = document.getElementById("researchQueryInput");
+
+      if (tab === "news") {
+        searchBox.classList.add("hidden");
+        newsBox.classList.remove("hidden");
+        loadNewsFeed("general");
+      } else {
+        searchBox.classList.remove("hidden");
+        newsBox.classList.add("hidden");
+        if (tab === "ai") input.placeholder = "Ask anything for an instant AI/Web overview...";
+        if (tab === "song") input.placeholder = "Search song title or artist (e.g., Soda Stereo, Yard Act)...";
+        if (tab === "wiki") input.placeholder = "Search Wikipedia article (e.g., Falkland Islands, Duran Duran)...";
+      }
+    }
+
+    async function runResearchPlugin() {
+      const query = document.getElementById("researchQueryInput").value.trim();
+      if (!query) return;
+      const resultsDiv = document.getElementById("researchResults");
+      resultsDiv.innerHTML = `<div class="text-center text-zinc-400 text-xs py-8 animate-pulse">Fetching live data for "${query}"...</div>`;
+
+      try {
+        if (currentResearchTab === "ai") {
+          await fetchAIOverview(query, resultsDiv);
+        } else if (currentResearchTab === "song") {
+          await fetchSongInfo(query, resultsDiv);
+        } else if (currentResearchTab === "wiki") {
+          await fetchWikipedia(query, resultsDiv);
+        }
+      } catch (err) {
+        resultsDiv.innerHTML = `<div class="p-3 rounded-lg bg-red-950/50 border border-red-800 text-xs text-red-300">Lookup failed: ${err.message}</div>`;
+      }
+    }
+
+    // Plugin 1: AI / Instant Web Overview (DuckDuckGo Instant Answer + Wikipedia fallback)
+    async function fetchAIOverview(query, container) {
+      const ddgRes = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`);
+      const ddg = await ddgRes.json();
+
+      let summary = ddg.AbstractText || ddg.Answer || "";
+      let sourceName = ddg.AbstractSource || "Instant Web Overview";
+      let sourceUrl = ddg.AbstractURL || `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+
+      // Fallback to Wikipedia OpenSearch summary if DDG returns empty
+      if (!summary) {
+        const wikiSearch = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`);
+        const wikiData = await wikiSearch.json();
+        if (wikiData.query && wikiData.query.search.length > 0) {
+          const topTitle = wikiData.query.search[0].title;
+          const sumRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topTitle)}`);
+          const sumJson = await sumRes.json();
+          summary = sumJson.extract || "";
+          sourceName = `Web & Wiki Overview: ${topTitle}`;
+          sourceUrl = sumJson.content_urls?.desktop?.page || sourceUrl;
+        }
+      }
+
+      if (!summary) {
+        container.innerHTML = `
+          <div class="p-4 rounded-xl bg-zinc-900 border border-zinc-800 space-y-2 text-xs">
+            <p class="text-zinc-300">No direct instant summary found for <strong>"${query}"</strong>.</p>
+            <a href="https://www.google.com/search?q=${encodeURIComponent(query)}" target="_blank" class="inline-block px-3 py-1.5 rounded bg-indigo-600 text-white font-semibold">Open Google AI Search ↗</a>
+          </div>
+        `;
+        return;
+      }
+
+      const safeInsert = `[INFO: ${query.toUpperCase()}] ${summary}`;
+      container.innerHTML = `
+        <div class="p-4 rounded-xl bg-zinc-900 border border-zinc-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] mono text-indigo-400 font-bold">✨ AI / WEB OVERVIEW</span>
+            <a href="${sourceUrl}" target="_blank" class="text-[11px] text-zinc-400 hover:text-white underline">${sourceName} ↗</a>
+          </div>
+          <p class="text-zinc-200 leading-relaxed text-sm">${summary}</p>
+          <button onclick='injectResearchBlock(${JSON.stringify(safeInsert)})' class="w-full py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold">+ Insert into Active Show</button>
+        </div>
+      `;
+    }
+
+    // Plugin 2: Song & Artist Info (iTunes Search API)
+    async function fetchSongInfo(query, container) {
+      const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=6`);
+      const data = await res.json();
+
+      if (!data.results || data.results.length === 0) {
+        container.innerHTML = `<div class="text-center text-zinc-500 text-xs py-8">No songs found for "${query}".</div>`;
+        return;
+      }
+
+      container.innerHTML = "";
+      data.results.forEach(track => {
+        const year = track.releaseDate ? track.releaseDate.slice(0, 4) : "Unknown";
+        const mins = Math.floor((track.trackTimeMillis || 0) / 60000);
+        const secs = Math.floor(((track.trackTimeMillis || 0) % 60000) / 1000);
+        const dur = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        const backAnnounce = `[MUSIC INFO] That was "${track.trackName}" by ${track.artistName}, released in ${year} on the album ${track.collectionName} (${track.primaryGenreName}, ${dur}).`;
+
+        const item = document.createElement("div");
+        item.className = "p-3 rounded-xl bg-zinc-900 border border-zinc-800 flex gap-3 items-start";
+        item.innerHTML = `
+          <img src="${track.artworkUrl60}" alt="Cover" class="w-12 h-12 rounded-lg shrink-0 bg-zinc-800" />
+          <div class="flex-1 min-w-0 space-y-1">
+            <div class="font-bold text-zinc-100 text-sm truncate">${track.trackName}</div>
+            <div class="text-xs text-indigo-400 truncate">${track.artistName} &bull; ${year}</div>
+            <div class="text-[11px] text-zinc-400 truncate">${track.collectionName} (${track.primaryGenreName} &bull; ${dur})</div>
+            <button onclick='injectResearchBlock(${JSON.stringify(backAnnounce)})' class="mt-1.5 px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-semibold">+ Insert Back-Announce</button>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    // Plugin 3: Wikipedia Lookup
+    async function fetchWikipedia(query, container) {
+      const searchRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srlimit=4&format=json&origin=*`);
+      const searchData = await searchRes.json();
+
+      if (!searchData.query || searchData.query.search.length === 0) {
+        container.innerHTML = `<div class="text-center text-zinc-500 text-xs py-8">No Wikipedia results for "${query}".</div>`;
+        return;
+      }
+
+      container.innerHTML = "";
+      for (const hit of searchData.query.search) {
+        const sumRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(hit.title)}`);
+        const page = await sumRes.json();
+        const extract = page.extract || hit.snippet.replace(/<[^>]+>/g, "");
+        const scriptSnippet = `[FACT CHECK: ${page.title}] ${extract}`;
+
+        const card = document.createElement("div");
+        card.className = "p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 space-y-2";
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-zinc-100 text-sm">${page.title}</span>
+            <a href="${page.content_urls?.desktop?.page || '#'}" target="_blank" class="text-[11px] text-indigo-400 hover:underline">Wiki ↗</a>
+          </div>
+          <p class="text-xs text-zinc-300 leading-relaxed line-clamp-4">${extract}</p>
+          <button onclick='injectResearchBlock(${JSON.stringify(scriptSnippet)})' class="px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-semibold">+ Add to Script</button>
+        `;
+        container.appendChild(card);
+      }
+    }
+
+    // Plugin 4: Live News Feeds (World, Showbiz, Music)
+    async function loadNewsFeed(category) {
+      ["general", "showbiz", "music"].forEach(c => {
+        const btn = document.getElementById("news_btn_" + c);
+        btn.className = c === category
+          ? "flex-1 py-1.5 rounded bg-indigo-600 text-white text-xs font-semibold"
+          : "flex-1 py-1.5 rounded bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 hover:text-zinc-200";
+      });
+
+      const feeds = {
+        general: { label: "WORLD NEWS", url: "https://feeds.bbci.co.uk/news/world/rss.xml" },
+        showbiz: { label: "SHOWBIZ & TV", url: "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml" },
+        music: { label: "MUSIC NEWS", url: "https://www.nme.com/news/music/feed" }
+      };
+
+      const selected = feeds[category];
+      const container = document.getElementById("researchResults");
+      container.innerHTML = `<div class="text-center text-zinc-400 text-xs py-8 animate-pulse">Loading live ${selected.label} headlines...</div>`;
+
+      try {
+        const api = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(selected.url)}`;
+        const res = await fetch(api);
+        const data = await res.json();
+
+        if (!data.items || data.items.length === 0) {
+          throw new Error("Feed returned no headlines");
+        }
+
+        container.innerHTML = "";
+        data.items.slice(0, 8).forEach(item => {
+          const cleanDesc = (item.description || "").replace(/<[^>]+>/g, "").trim();
+          const newsBlockText = `[${selected.label}] ${item.title}. ${cleanDesc}`;
+
+          const card = document.createElement("div");
+          card.className = "p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 space-y-2";
+          card.innerHTML = `
+            <div class="flex items-start justify-between gap-2">
+              <a href="${item.link}" target="_blank" class="font-bold text-zinc-100 text-xs hover:text-indigo-400 leading-snug">${item.title}</a>
+            </div>
+            <p class="text-[11px] text-zinc-400 line-clamp-3">${cleanDesc}</p>
+            <div class="flex items-center justify-between pt-1">
+              <span class="text-[10px] mono text-zinc-500">${item.pubDate ? item.pubDate.slice(0, 16) : ''}</span>
+              <button onclick='injectResearchBlock(${JSON.stringify(newsBlockText)})' class="px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-semibold">+ Insert Headline</button>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      } catch (err) {
+        container.innerHTML = `<div class="p-3 rounded-lg bg-red-950/50 border border-red-800 text-xs text-red-300">Could not load ${selected.label} feed right now.</div>`;
+      }
+    }
+
+    function injectResearchBlock(rawText) {
+      const show = appState.shows.find(s => s.id === appState.activeShowId);
+      if (!show) return;
+      const formattedHtml = rawText.replace(/\[([^\]]+)\]/g, '<span class="cue-tag">[$1]</span>');
+      show.blocks.push({ id: Date.now(), html: formattedHtml, blackout: false });
+      saveAndSync();
+      render();
+    }
+
+    // =========================================================================
+    // BLOCK CRUD, MODALS, SCRATCHPAD & FIREBASE SYNC
+    // =========================================================================
     function moveBlock(id, direction) {
       const show = appState.shows.find(s => s.id === appState.activeShowId);
       const idx = show.blocks.findIndex(b => b.id === id);
@@ -467,21 +911,8 @@
       render();
     }
 
-    function openNewShowModal() { document.getElementById("showModal").classList.remove("hidden"); }
-    function closeNewShowModal() { document.getElementById("showModal").classList.add("hidden"); }
-    function createNewShow() {
-      const name = document.getElementById("newShowName").value.trim();
-      const hours = parseFloat(document.getElementById("newShowHours").value) || 1;
-      if (!name) return;
-      const newId = "show_" + Date.now();
-      appState.shows.push({ id: newId, title: name, targetHours: hours, blocks: [{ id: Date.now(), html: `<span class="cue-tag">[INTRO]</span> Welcome to ${name}`, blackout: false }] });
-      appState.activeShowId = newId;
-      closeNewShowModal();
-      saveAndSync();
-      render();
-    }
-
     function toggleScratchpad() {
+      document.getElementById("researchDrawer").classList.add("translate-x-full");
       document.getElementById("scratchpadDrawer").classList.toggle("translate-x-full");
     }
     function saveScratchpad() {
@@ -515,7 +946,7 @@
         try {
           const res = await fetch(FIREBASE_ENDPOINT);
           const data = await res.json();
-          if (data && data.shows) {
+          if (data && data.shows && data.shows.length > 0) {
             appState = data;
             render();
             return;

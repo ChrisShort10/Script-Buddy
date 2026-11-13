@@ -105,12 +105,9 @@
   </div>
 
   <script>
-    // =========================================================================
-    // CLOUD SYNC ENDPOINT
-    // =========================================================================
     const FIREBASE_ENDPOINT = "https://script-buddy-v1-default-rtdb.firebaseio.com/script.json";
 
-    const WPM = 145; // Average natural radio presenter speaking pace
+    const WPM = 145;
     let fontSize = 22;
     let focusIndex = 0;
     let state = {
@@ -122,17 +119,14 @@
       ]
     };
 
-    // Live Studio Clock
     setInterval(() => {
       document.getElementById("liveClock").textContent = new Date().toTimeString().split(" ")[0];
     }, 1000);
 
-    // Format [CUE TAGS] cleanly
     function formatText(raw) {
       return raw.replace(/\[([^\]]+)\]/g, '<span class="cue-tag">$1</span>');
     }
 
-    // Calculate spoken seconds
     function calcSeconds(blocks) {
       const words = blocks.reduce((acc, b) => {
         const clean = b.text.replace(/\[[^\]]+\]/g, "").trim();

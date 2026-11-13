@@ -368,6 +368,7 @@
 
     function persistBlockChanges() {
       const show = appState.shows.find(s => s.id === appState.activeShowId);
+      if (!show) return;
       document.querySelectorAll(".script-text-area").forEach(el => {
         const id = parseInt(el.dataset.id);
         const block = show.blocks.find(b => b.id === id);
@@ -379,6 +380,7 @@
 
     function toggleBlackout(id) {
       const show = appState.shows.find(s => s.id === appState.activeShowId);
+      if (!show) return;
       const b = show.blocks.find(x => x.id === id);
       if (b) {
         b.blackout = !b.blackout;
@@ -665,7 +667,6 @@
       }
     }
 
-    // Plugin 1: AI / Instant Web Overview (DuckDuckGo Instant Answer + Wikipedia fallback)
     async function fetchAIOverview(query, container) {
       const ddgRes = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`);
       const ddg = await ddgRes.json();
@@ -674,7 +675,6 @@
       let sourceName = ddg.AbstractSource || "Instant Web Overview";
       let sourceUrl = ddg.AbstractURL || `https://www.google.com/search?q=${encodeURIComponent(query)}`;
 
-      // Fallback to Wikipedia OpenSearch summary if DDG returns empty
       if (!summary) {
         const wikiSearch = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`);
         const wikiData = await wikiSearch.json();
@@ -711,7 +711,6 @@
       `;
     }
 
-    // Plugin 2: Song & Artist Info (iTunes Search API)
     async function fetchSongInfo(query, container) {
       const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=6`);
       const data = await res.json();
@@ -744,7 +743,6 @@
       });
     }
 
-    // Plugin 3: Wikipedia Lookup
     async function fetchWikipedia(query, container) {
       const searchRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srlimit=4&format=json&origin=*`);
       const searchData = await searchRes.json();
@@ -775,7 +773,6 @@
       }
     }
 
-    // Plugin 4: Live News Feeds (World, Showbiz, Music)
     async function loadNewsFeed(category) {
       ["general", "showbiz", "music"].forEach(c => {
         const btn = document.getElementById("news_btn_" + c);
@@ -830,6 +827,7 @@
     function injectResearchBlock(rawText) {
       const show = appState.shows.find(s => s.id === appState.activeShowId);
       if (!show) return;
+      if (!show.blocks) show.blocks = [];
       const formattedHtml = rawText.replace(/\[([^\]]+)\]/g, '<span class="cue-tag">[$1]</span>');
       show.blocks.push({ id: Date.now(), html: formattedHtml, blackout: false });
       saveAndSync();
@@ -841,6 +839,7 @@
     // =========================================================================
     function moveBlock(id, direction) {
       const show = appState.shows.find(s => s.id === appState.activeShowId);
+      if (!show) return;
       const idx = show.blocks.findIndex(b => b.id === id);
       if ((idx + direction >= 0) && (idx + direction < show.blocks.length)) {
         const item = show.blocks.splice(idx, 1)[0];
@@ -852,20 +851,21 @@
 
     function deleteBlock(id) {
       const show = appState.shows.find(s => s.id === appState.activeShowId);
+      if (!show) return;
       show.blocks = show.blocks.filter(b => b.id !== id);
       saveAndSync();
       render();
     }
 
     function openBlockModal(mode, id = null) {
-      editingBlockId = id;
+      editingBlockId = mode === 'edit' ? id : null;
       const modalTitle = document.getElementById("modalHeaderTitle");
       const textInput = document.getElementById("blockTextInput");
 
       if (mode === 'edit' && id !== null) {
         modalTitle.textContent = "Edit Script Block";
         const show = appState.shows.find(s => s.id === appState.activeShowId);
-        const block = show.blocks.find(b => b.id === id);
+        const block = show ? show.blocks.find(b => b.id === id) : null;
         const tmp = document.createElement("div");
         tmp.innerHTML = block ? block.html : "";
         textInput.value = tmp.textContent || tmp.innerText || "";
@@ -896,6 +896,8 @@
       const rawText = document.getElementById("blockTextInput").value.trim();
       if (!rawText) return;
       const show = appState.shows.find(s => s.id === appState.activeShowId);
+      if (!show) return;
+      if (!show.blocks) show.blocks = [];
 
       const formattedHtml = rawText.replace(/\[([^\]]+)\]/g, '<span class="cue-tag">[$1]</span>');
 

@@ -11,10 +11,10 @@
     .mono { font-family: 'JetBrains Mono', monospace; }
     
     /* Granular Inline Styles */
-    .hl-yellow { background: rgba(250, 204, 21, 0.35); padding: 2px 4px; border-radius: 3px; }
-    .hl-cyan { background: rgba(34, 211, 238, 0.35); padding: 2px 4px; border-radius: 3px; }
-    .hl-pink { background: rgba(244, 114, 182, 0.35); padding: 2px 4px; border-radius: 3px; }
-    .strikethrough { text-decoration: line-through; opacity: 0.35; }
+    .hl-yellow { background: rgba(250, 204, 21, 0.35); color: #fef08a; padding: 1px 4px; border-radius: 3px; }
+    .hl-cyan { background: rgba(34, 211, 238, 0.32); color: #cffafe; padding: 1px 4px; border-radius: 3px; }
+    .hl-pink { background: rgba(244, 114, 182, 0.32); color: #fce7f3; padding: 1px 4px; border-radius: 3px; }
+    .strikethrough { text-decoration: line-through; opacity: 0.38; }
 
     /* Entire Block Blackout */
     .block-blackout {
@@ -37,21 +37,22 @@
     #selectionToolbar {
       position: absolute; display: none; z-index: 100;
       background: #18181b; border: 1px solid #3f3f46; border-radius: 8px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7);
-      padding: 6px; align-items: center; gap: 4px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.85);
+      padding: 6px; align-items: center; gap: 5px;
     }
   </style>
 </head>
 <body class="min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
 
-  <!-- Floating Selection Toolbar -->
-  <div id="selectionToolbar">
-    <button onclick="applyInlineStyle('hl-yellow')" class="w-6 h-6 rounded bg-yellow-400 hover:scale-110 transition-transform" title="Highlight Yellow"></button>
-    <button onclick="applyInlineStyle('hl-cyan')" class="w-6 h-6 rounded bg-cyan-400 hover:scale-110 transition-transform" title="Highlight Cyan"></button>
-    <button onclick="applyInlineStyle('hl-pink')" class="w-6 h-6 rounded bg-pink-400 hover:scale-110 transition-transform" title="Highlight Pink"></button>
-    <button onclick="applyInlineStyle('strikethrough')" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold" title="Strikethrough">S</button>
-    <div class="h-4 w-px bg-zinc-700 mx-1"></div>
-    <button onclick="speakSelection()" class="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1">🔊 Listen (UK)</button>
+  <!-- Floating Selection Toolbar (onmousedown preventDefault keeps selection alive) -->
+  <div id="selectionToolbar" onmousedown="event.preventDefault()">
+    <button type="button" onclick="applyInlineStyle('hl-yellow')" class="w-6 h-6 rounded bg-yellow-400 hover:scale-110 transition-transform" title="Highlight Yellow"></button>
+    <button type="button" onclick="applyInlineStyle('hl-cyan')" class="w-6 h-6 rounded bg-cyan-400 hover:scale-110 transition-transform" title="Highlight Cyan"></button>
+    <button type="button" onclick="applyInlineStyle('hl-pink')" class="w-6 h-6 rounded bg-pink-400 hover:scale-110 transition-transform" title="Highlight Pink"></button>
+    <button type="button" onclick="applyInlineStyle('strikethrough')" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold line-through" title="Strikethrough Selection">S</button>
+    <button type="button" onclick="clearSelectionFormatting()" class="px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-[11px]" title="Clear Formatting">✕</button>
+    <div class="h-4 w-px bg-zinc-700 mx-0.5"></div>
+    <button type="button" onclick="speakSelection()" class="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1">🔊 UK</button>
   </div>
 
   <!-- Top SaaS Control Bar -->
@@ -95,7 +96,7 @@
         <button onclick="insertCueToModal('[TIME CHECK]')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[TIME CHECK]</button>
         <button onclick="insertCueToModal('[OUTRO]')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[OUTRO]</button>
       </div>
-      <div class="text-zinc-500 text-[11px] hidden md:block">Highlight words for TTS or granular styling &bull; Click Blackout to discard block</div>
+      <div class="text-zinc-500 text-[11px] hidden md:block">Highlight words for UK TTS or granular styling &bull; Click Blackout to discard block</div>
     </div>
 
     <!-- Script Blocks Container -->
@@ -183,61 +184,110 @@
 
     let editingBlockId = null;
     let activeRange = null;
+    let savedSelectedText = "";
+    let cachedVoices = [];
+
+    // Preload voices so UK English is immediately ready on first click
+    function loadVoices() {
+      if ('speechSynthesis' in window) {
+        cachedVoices = window.speechSynthesis.getVoices();
+      }
+    }
+    loadVoices();
+    if ('speechSynthesis' in window && window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
 
     setInterval(() => {
       document.getElementById("liveClock").textContent = new Date().toTimeString().split(" ")[0];
     }, 1000);
 
-    // Floating Toolbar Selection Listener
-    document.addEventListener("mouseup", (e) => {
+    // Position and show the floating toolbar whenever text inside a script block is selected
+    function updateSelectionToolbar() {
       const toolbar = document.getElementById("selectionToolbar");
       const selection = window.getSelection();
-      
-      if (!selection.isCollapsed && selection.toString().trim().length > 0) {
-        const range = selection.getRangeAt(0);
-        const contentBlock = range.commonAncestorContainer.parentElement.closest(".script-text-area");
-        
-        if (contentBlock) {
-          activeRange = range.cloneRange();
-          const rect = range.getBoundingClientRect();
-          toolbar.style.top = `${window.scrollY + rect.top - 45}px`;
-          toolbar.style.left = `${window.scrollX + rect.left + (rect.width / 2) - 100}px`;
-          toolbar.style.display = "flex";
-          return;
-        }
+
+      if (!selection || selection.isCollapsed || !selection.toString().trim()) {
+        toolbar.style.display = "none";
+        return;
       }
-      toolbar.style.display = "none";
-    });
+
+      const range = selection.getRangeAt(0);
+      const containerNode = range.commonAncestorContainer.nodeType === Node.TEXT_NODE
+        ? range.commonAncestorContainer.parentElement
+        : range.commonAncestorContainer;
+
+      const contentBlock = containerNode ? containerNode.closest(".script-text-area") : null;
+      if (!contentBlock) {
+        toolbar.style.display = "none";
+        return;
+      }
+
+      activeRange = range.cloneRange();
+      savedSelectedText = selection.toString().trim();
+
+      const rect = range.getBoundingClientRect();
+      const topPos = Math.max(10, window.scrollY + rect.top - 48);
+      const leftPos = Math.max(10, Math.min(window.innerWidth - 240, window.scrollX + rect.left + (rect.width / 2) - 110));
+
+      toolbar.style.top = `${topPos}px`;
+      toolbar.style.left = `${leftPos}px`;
+      toolbar.style.display = "flex";
+    }
+
+    document.addEventListener("mouseup", () => setTimeout(updateSelectionToolbar, 10));
+    document.addEventListener("keyup", () => setTimeout(updateSelectionToolbar, 10));
+    document.addEventListener("touchend", () => setTimeout(updateSelectionToolbar, 50));
 
     function applyInlineStyle(styleClass) {
       if (!activeRange) return;
+
       const span = document.createElement("span");
       span.className = styleClass;
-      span.appendChild(activeRange.extractContents());
-      activeRange.insertNode(span);
-      
+
+      try {
+        span.appendChild(activeRange.extractContents());
+        activeRange.insertNode(span);
+      } catch (e) {
+        console.warn("Could not wrap complex cross-tag selection:", e);
+      }
+
       window.getSelection().removeAllRanges();
+      activeRange = null;
+      document.getElementById("selectionToolbar").style.display = "none";
+      persistBlockChanges();
+    }
+
+    function clearSelectionFormatting() {
+      if (!activeRange) return;
+      const plain = document.createTextNode(activeRange.toString());
+      activeRange.deleteContents();
+      activeRange.insertNode(plain);
+
+      window.getSelection().removeAllRanges();
+      activeRange = null;
       document.getElementById("selectionToolbar").style.display = "none";
       persistBlockChanges();
     }
 
     function speakSelection() {
-      const selection = window.getSelection();
-      if (!selection.isCollapsed) {
-        const textToSpeak = selection.toString();
-        if ('speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
-          const utterance = new SpeechSynthesisUtterance(textToSpeak);
-          utterance.rate = 0.95;
-          
-          const voices = window.speechSynthesis.getVoices();
-          const ukVoice = voices.find(v => v.lang === 'en-GB' || v.name.includes('UK') || v.name.includes('British'));
-          if (ukVoice) utterance.voice = ukVoice;
-          
-          window.speechSynthesis.speak(utterance);
-        }
+      const textToSpeak = savedSelectedText || window.getSelection().toString().trim();
+      if (!textToSpeak) return;
+
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.lang = 'en-GB';
+        utterance.rate = 0.95;
+
+        const voices = cachedVoices.length ? cachedVoices : window.speechSynthesis.getVoices();
+        const ukVoice =
+          voices.find(v => v.lang === 'en-GB' && (v.name.includes('Google') || v.name.includes('Daniel') || v.name.includes('Serena') || v.name.includes('Natural'))) ||
+          voices.find(v => v.lang === 'en-GB' || v.lang === 'en_GB' || v.name.includes('UK') || v.name.includes('British'));
+
+        if (ukVoice) utterance.voice = ukVoice;
+        window.speechSynthesis.speak(utterance);
       }
-      document.getElementById("selectionToolbar").style.display = "none";
     }
 
     function persistBlockChanges() {
@@ -283,9 +333,11 @@
       currentShow.blocks.forEach((block, idx) => {
         const tempDiv = document.createElement("div");
         tempDiv.innerHTML = block.html;
-        const cleanText = tempDiv.textContent || tempDiv.innerText || "";
+        // Exclude cue tags and strikethrough spans from spoken word count
+        tempDiv.querySelectorAll(".cue-tag, .strikethrough").forEach(el => el.remove());
+        const cleanText = (tempDiv.textContent || tempDiv.innerText || "").trim();
         const words = cleanText ? cleanText.split(/\s+/).length : 0;
-        totalWords += words;
+        if (!block.blackout) totalWords += words;
         const blockSecs = Math.round((words / WPM) * 60);
 
         const card = document.createElement("div");
@@ -293,10 +345,10 @@
 
         card.innerHTML = `
           <div class="flex items-start justify-between gap-4">
-            <div class="script-text-area flex-1 text-[19px] leading-relaxed outline-none" data-id="${block.id}" contenteditable="true" onblur="persistBlockChanges()">${block.html}</div>
-            <div class="flex items-center gap-1 opacity-20 group-hover:opacity-100 transition-opacity">
-              <button title="Blackout / Discard Block" onclick="toggleBlackout(${block.id})" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded text-xs font-semibold">Blackout</button>
-              <button title="Edit Block Source" onclick="openBlockModal('edit', ${block.id})" class="px-2 py-1 bg-zinc-800 text-indigo-400 rounded text-xs font-semibold">Edit</button>
+            <div class="script-text-area flex-1 text-[19px] leading-relaxed outline-none cursor-text" data-id="${block.id}">${block.html}</div>
+            <div class="flex items-center gap-1 opacity-30 group-hover:opacity-100 transition-opacity shrink-0">
+              <button title="Blackout / Discard Block" onclick="toggleBlackout(${block.id})" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded text-xs font-semibold">${block.blackout ? 'Restore' : 'Blackout'}</button>
+              <button title="Edit Block Text" onclick="openBlockModal('edit', ${block.id})" class="px-2 py-1 bg-zinc-800 text-indigo-400 rounded text-xs font-semibold">Edit</button>
               <button title="Move Up" onclick="moveBlock(${block.id}, -1)" class="px-1.5 py-1 bg-zinc-800 text-zinc-300 rounded text-xs">▲</button>
               <button title="Move Down" onclick="moveBlock(${block.id}, 1)" class="px-1.5 py-1 bg-zinc-800 text-zinc-300 rounded text-xs">▼</button>
               <button title="Delete" onclick="deleteBlock(${block.id})" class="px-1.5 py-1 bg-red-950/60 text-red-400 rounded text-xs ml-1">🗑</button>
@@ -304,7 +356,7 @@
           </div>
           <div class="mt-2.5 pt-2 border-t border-zinc-800/60 flex items-center justify-between text-[11px] mono text-zinc-500">
             <span>BLOCK #${idx + 1} &bull; EST. <strong class="text-zinc-400">${blockSecs}s</strong> (${words} words)</span>
-            <span class="text-zinc-400">Select text for TTS / granular styling</span>
+            <span class="text-zinc-400">Select words to highlight, strike, or hear UK TTS</span>
           </div>
         `;
         container.appendChild(card);
@@ -387,9 +439,12 @@
 
     function insertCueToModal(tag) {
       const textarea = document.getElementById("blockTextInput");
+      if (document.getElementById("blockModal").classList.contains("hidden")) {
+        openBlockModal('add');
+      }
       const val = textarea.value;
-      const selStart = textarea.selectionStart;
-      textarea.value = val.substring(0, selStart) + " " + tag + " " + val.substring(textarea.selectionEnd);
+      const selStart = textarea.selectionStart || val.length;
+      textarea.value = val.substring(0, selStart) + (selStart > 0 ? " " : "") + tag + " " + val.substring(textarea.selectionEnd || val.length);
       textarea.focus();
     }
 
@@ -398,7 +453,6 @@
       if (!rawText) return;
       const show = appState.shows.find(s => s.id === appState.activeShowId);
 
-      // Auto-tag cues if present
       const formattedHtml = rawText.replace(/\[([^\]]+)\]/g, '<span class="cue-tag">[$1]</span>');
 
       if (editingBlockId !== null) {

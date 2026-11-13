@@ -18,7 +18,6 @@
       padding: 1px 6px; border-radius: 4px; margin-right: 4px; vertical-align: middle;
     }
     del { opacity: 0.35; text-decoration: line-through; }
-    .focus-mode .script-block:not(.active-block) { opacity: 0.25; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
@@ -36,7 +35,7 @@
     <!-- Backtiming & Live Stats Bar -->
     <div class="flex items-center gap-4 text-xs mono bg-zinc-900/80 border border-zinc-800 px-3 py-1.5 rounded-lg">
       <div><span class="text-zinc-500">SCRIPT:</span> <span id="timeTotal" class="text-zinc-200 font-bold">0:00</span></div>
-      <div><span class="text-zinc-500">TARGET:</span> <span id="timeTarget" class="text-indigo-400 font-bold">60m</span></div>
+      <div><span class="text-zinc-500">TARGET:</span> <span id="timeTarget" class="text-indigo-400 font-bold">1h</span></div>
       <div><span class="text-zinc-500">DELTA:</span> <span id="timeDelta" class="text-emerald-400 font-bold">On Pace</span></div>
       <div class="hidden sm:block text-zinc-400">| CLOCK: <span id="liveClock" class="text-zinc-200 font-bold">00:00:00</span></div>
     </div>
@@ -59,12 +58,12 @@
       <div class="flex flex-wrap gap-1.5">
         <button onclick="insertCueTag('INTRO')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[INTRO]</button>
         <button onclick="insertCueTag('SFX: Bed')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[SFX: Bed]</button>
+        <button onclick="insertCueTag('COMPETITION / CALLER')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-amber-300 rounded mono">[COMPETITION / CALLER]</button>
         <button onclick="insertCueTag('AD BREAK')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[AD BREAK]</button>
-        <button onclick="insertCueTag('PHONEER')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[PHONEER]</button>
         <button onclick="insertCueTag('TIME CHECK')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[TIME CHECK]</button>
         <button onclick="insertCueTag('OUTRO')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[OUTRO]</button>
       </div>
-      <div class="text-zinc-500 text-[11px] hidden md:block">Tip: Wrap text in ~~strikethrough~~ for partial cross-out</div>
+      <div class="text-zinc-500 text-[11px] hidden md:block">Tip: Use ~~strikethrough~~ for partial cross-out</div>
     </div>
 
     <!-- Script Blocks Container -->
@@ -79,7 +78,7 @@
       <h3 class="font-bold text-sm text-zinc-200">Presenter Scratchpad & Notes</h3>
       <button onclick="toggleScratchpad()" class="text-zinc-400 hover:text-white text-lg">&times;</button>
     </div>
-    <textarea id="scratchpadText" oninput="saveScratchpad()" placeholder="Jot down caller names, contest numbers, quick reminders, or ad-libs here..." class="w-full flex-1 bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500 font-mono resize-none"></textarea>
+    <textarea id="scratchpadText" oninput="saveScratchpad()" placeholder="Jot down caller names, competition winners, contest codes, or reminders here..." class="w-full flex-1 bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500 font-mono resize-none"></textarea>
     <div class="text-[11px] text-zinc-500 mt-2">Auto-saves to browser storage.</div>
   </div>
 
@@ -92,7 +91,7 @@
       </div>
       <div>
         <label class="block text-xs text-zinc-400 mb-1">Block Text (WYSIWYG Markdown & Cues Supported)</label>
-        <textarea id="blockTextInput" rows="6" placeholder="[INTRO] Welcome back to the show... Use ~~strikethrough~~ for specific lines." class="w-full bg-zinc-950 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-100 font-mono focus:outline-none focus:border-indigo-500"></textarea>
+        <textarea id="blockTextInput" rows="6" placeholder="[INTRO] Welcome back... Use ~~strikethrough~~ for specific lines." class="w-full bg-zinc-950 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-100 font-mono focus:outline-none focus:border-indigo-500"></textarea>
       </div>
       <div class="flex justify-end gap-2 pt-2">
         <button onclick="closeBlockModal()" class="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm text-zinc-300">Cancel</button>
@@ -113,8 +112,8 @@
         <input id="newShowName" type="text" placeholder="e.g., Hits of the 80s & 90s" class="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
       </div>
       <div>
-        <label class="block text-xs text-zinc-400 mb-1">Target Duration (Minutes)</label>
-        <input id="newShowDuration" type="number" value="60" class="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
+        <label class="block text-xs text-zinc-400 mb-1">Target Duration (Hours)</label>
+        <input id="newShowHours" type="number" step="0.5" value="1" class="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
       </div>
       <div class="flex justify-end gap-2 pt-2">
         <button onclick="closeNewShowModal()" class="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm text-zinc-300">Cancel</button>
@@ -124,11 +123,8 @@
   </div>
 
   <script>
-    // =========================================================================
-    // FIREBASE ENDPOINT & APP STATE
-    // =========================================================================
     const FIREBASE_ENDPOINT = "https://script-buddy-v1-default-rtdb.firebaseio.com/broadcast.json";
-    const WPM = 145; // Standard broadcast speech pace
+    const WPM = 145;
 
     let appState = {
       activeShowId: "show_morning",
@@ -136,46 +132,40 @@
         {
           id: "show_morning",
           title: "Morning Drive & News",
-          targetMinutes: 60,
+          targetHours: 1,
           blocks: [
-            { id: 1, text: "[INTRO BED - 15s] Good morning Stanley! Beautiful crisp morning out there.", hl: "hl-yellow", editing: false },
-            { id: 2, text: "[HEADLINE] Ferry schedules have been updated for the weekend. ~~Double check departures online.~~ Normal service resumes Monday.", hl: "", editing: false },
-            { id: 3, text: "[MUSIC] Let's kick things off with a classic track.", hl: "", editing: false }
+            { id: 1, text: "[INTRO BED - 15s] Good morning Stanley!", hl: "hl-yellow", editing: false },
+            { id: 2, text: "[COMPETITION / CALLER] Line 3 is John for the morning mystery voice giveaway.", hl: "hl-cyan", editing: false }
           ]
         },
         {
           id: "show_80s90s",
           title: "Hits of the 80s & 90s",
-          targetMinutes: 120,
+          targetHours: 2,
           blocks: [
-            { id: 101, text: "[INTRO] Welcome back into the retro zone for the next two hours of non-stop hits.", hl: "hl-cyan", editing: false }
+            { id: 101, text: "[INTRO] Welcome back into the retro zone for the next two hours.", hl: "", editing: false }
           ]
         }
       ]
     };
 
-    let editingBlockId = null;
-
-    // Studio Clock
     setInterval(() => {
       document.getElementById("liveClock").textContent = new Date().toTimeString().split(" ")[0];
     }, 1000);
 
-    // Render App
     function render() {
-      // Populate Show Dropdown
       const selector = document.getElementById("showSelector");
       selector.innerHTML = "";
       appState.shows.forEach(show => {
         const opt = document.createElement("option");
         opt.value = show.id;
-        opt.textContent = `${show.title} (${show.targetMinutes}m)`;
+        opt.textContent = `${show.title} (${show.targetHours}h)`;
         if (show.id === appState.activeShowId) opt.selected = true;
         selector.appendChild(opt);
       });
 
       const currentShow = appState.shows.find(s => s.id === appState.activeShowId) || appState.shows[0];
-      document.getElementById("timeTarget  targetMinutes").textContent = currentShow.targetMinutes + "m";
+      document.getElementById("timeTarget").textContent = currentShow.targetHours + "h";
 
       const container = document.getElementById("blocksContainer");
       container.innerHTML = "";
@@ -183,7 +173,6 @@
       let totalWords = 0;
 
       currentShow.blocks.forEach((block, idx) => {
-        // Calculate block word count & read time
         const cleanText = block.text.replace(/\[[^\]]+\]/g, "").replace(/~~.*?~~/g, "").trim();
         const words = cleanText ? cleanText.split(/\s+/).length : 0;
         totalWords += words;
@@ -206,7 +195,6 @@
             </div>
           `;
         } else {
-          // Format markdown cues and strikethroughs
           let formatted = block.text
             .replace(/\[([^\]]+)\]/g, '<span class="cue-tag">$1</span>')
             .replace(/~~(.*?)~~/g, '<del>$1</del>');
@@ -233,33 +221,37 @@
         container.appendChild(card);
       });
 
-      // Total Time & Backtiming Delta
       const totalSecs = Math.round((totalWords / WPM) * 60);
-      const totalMins = totalSecs / 60;
+      const totalHours = totalSecs / 3600;
       document.getElementById("timeTotal").textContent = formatTime(totalSecs);
-      document.getElementById("timeTarget").textContent = currentShow.targetMinutes + "m";
+      document.getElementById("timeTarget").textContent = currentShow.targetHours + "h";
 
-      const deltaMins = Math.round((totalMins - currentShow.targetMinutes) * 10);
+      const targetSecs = currentShow.targetHours * 3600;
+      const diffSecs = totalSecs - targetSecs;
       const deltaEl = document.getElementById("timeDelta");
-      if (Math.abs(deltaMins) < 2) {
+      
+      if (Math.abs(diffSecs) < 120) {
         deltaEl.textContent = "On Pace";
         deltaEl.className = "text-emerald-400 font-bold";
-      } else if (deltaMins > 0) {
-        deltaEl.textContent = `+${(deltaMins/10).toFixed(1)}m Over`;
+      } else if (diffSecs > 0) {
+        deltaEl.textContent = `+${Math.round(diffSecs / 60)}m Over`;
         deltaEl.className = "text-amber-400 font-bold";
       } else {
-        deltaEl.textContent = `${(deltaMins/10).toFixed(1)}m Under`;
+        deltaEl.textContent = `${Math.round(Math.abs(diffSecs) / 60)}m Under`;
         deltaEl.className = "text-cyan-400 font-bold";
       }
     }
 
     function formatTime(sec) {
-      const m = Math.floor(sec / 60);
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
       const s = sec % 60;
+      if (h > 0) {
+        return `${h}h ${m}m`;
+      }
       return `${m}:${s < 10 ? "0" : ""}${s}`;
     }
 
-    // Actions & State Management
     function switchShow(showId) {
       appState.activeShowId = showId;
       saveAndSync();
@@ -321,12 +313,11 @@
 
     function insertCueTag(tag) {
       const show = appState.shows.find(s => s.id === appState.activeShowId);
-      show.blocks.push({ id: Date.now(), text: `[${tag}] New script link or notes here...`, hl: "", editing: false });
+      show.blocks.push({ id: Date.now(), text: `[${tag}] Script text or notes here...`, hl: "", editing: false });
       saveAndSync();
       render();
     }
 
-    // Modals
     function openImportModal() {
       document.getElementById("blockModal").classList.remove("hidden");
     }
@@ -352,17 +343,16 @@
     }
     function createNewShow() {
       const name = document.getElementById("newShowName").value.trim();
-      const mins = parseInt(document.getElementById("newShowDuration").value) || 60;
+      const hours = parseFloat(document.getElementById("newShowHours").value) || 1;
       if (!name) return;
       const newId = "show_" + Date.now();
-      appState.shows.push({ id: newId, title: name, targetMinutes: mins, blocks: [{ id: Date.now(), text: "[INTRO] Welcome to " + name, hl: "", editing: false }] });
+      appState.shows.push({ id: newId, title: name, targetHours: hours, blocks: [{ id: Date.now(), text: "[INTRO] Welcome to " + name, hl: "", editing: false }] });
       appState.activeShowId = newId;
       closeNewShowModal();
       saveAndSync();
       render();
     }
 
-    // Scratchpad Drawer
     function toggleScratchpad() {
       const drawer = document.getElementById("scratchpadDrawer");
       drawer.classList.toggle("translate-x-full");
@@ -374,7 +364,6 @@
       document.getElementById("scratchpadText").value = localStorage.getItem("onair_scratchpad");
     }
 
-    // Cloud & Local Sync
     async function saveAndSync() {
       localStorage.setItem("onair_app_state", JSON.stringify(appState));
       if (FIREBASE_ENDPOINT) {
@@ -384,13 +373,11 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(appState)
           });
-          const badge = document.getElementById("syncBadge");
-          badge.textContent = "CLOUD SYNCED";
-          badge.className = "text-[11px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 mono";
+          document.getElementById("syncBadge").textContent = "CLOUD SYNCED";
+          document.getElementById("syncBadge").className = "text-[11px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 mono";
         } catch (err) {
-          const badge = document.getElementById("syncBadge");
-          badge.textContent = "LOCAL OFFLINE";
-          badge.className = "text-[11px] px-2 py-0.5 rounded-full bg-amber-950 text-amber-400 border border-amber-800 mono";
+          document.getElementById("syncBadge").textContent = "LOCAL OFFLINE";
+          document.getElementById("syncBadge").className = "text-[11px] px-2 py-0.5 rounded-full bg-amber-950 text-amber-400 border border-amber-800 mono";
         }
       }
     }

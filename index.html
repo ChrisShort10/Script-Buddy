@@ -17,6 +17,7 @@
       font-family: 'JetBrains Mono', monospace; font-size: 0.75em; font-weight: 700;
       padding: 1px 6px; border-radius: 4px; margin-right: 4px; vertical-align: middle;
     }
+    .line-crossed { text-decoration: line-through; opacity: 0.3; filter: grayscale(100%); }
     del { opacity: 0.35; text-decoration: line-through; }
   </style>
 </head>
@@ -63,7 +64,7 @@
         <button onclick="insertCueTag('TIME CHECK')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[TIME CHECK]</button>
         <button onclick="insertCueTag('OUTRO')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[OUTRO]</button>
       </div>
-      <div class="text-zinc-500 text-[11px] hidden md:block">Tip: Use ~~strikethrough~~ for partial cross-out</div>
+      <div class="text-zinc-500 text-[11px] hidden md:block">Click block text to cross out &bull; Double-click or use button to edit inline</div>
     </div>
 
     <!-- Script Blocks Container -->
@@ -82,7 +83,7 @@
     <div class="text-[11px] text-zinc-500 mt-2">Auto-saves to browser storage.</div>
   </div>
 
-  <!-- Add / Edit Block Modal -->
+  <!-- Add Block Modal -->
   <div id="blockModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-zinc-900 border border-zinc-700 rounded-xl max-w-xl w-full p-6 shadow-2xl space-y-4">
       <div class="flex justify-between items-center">
@@ -91,7 +92,7 @@
       </div>
       <div>
         <label class="block text-xs text-zinc-400 mb-1">Block Text (WYSIWYG Markdown & Cues Supported)</label>
-        <textarea id="blockTextInput" rows="6" placeholder="[INTRO] Welcome back... Use ~~strikethrough~~ for specific lines." class="w-full bg-zinc-950 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-100 font-mono focus:outline-none focus:border-indigo-500"></textarea>
+        <textarea id="blockTextInput" rows="6" placeholder="[INTRO] Welcome back... Use ~~strikethrough~~ for specific partial lines." class="w-full bg-zinc-950 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-100 font-mono focus:outline-none focus:border-indigo-500"></textarea>
       </div>
       <div class="flex justify-end gap-2 pt-2">
         <button onclick="closeBlockModal()" class="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm text-zinc-300">Cancel</button>
@@ -134,8 +135,8 @@
           title: "Morning Drive & News",
           targetHours: 1,
           blocks: [
-            { id: 1, text: "[INTRO BED - 15s] Good morning Stanley!", hl: "hl-yellow", editing: false },
-            { id: 2, text: "[COMPETITION / CALLER] Line 3 is John for the morning mystery voice giveaway.", hl: "hl-cyan", editing: false }
+            { id: 1, text: "[INTRO BED - 15s] Good morning Stanley!", hl: "hl-yellow", crossed: false, editing: false },
+            { id: 2, text: "[COMPETITION / CALLER] Line 3 is John for the morning mystery voice giveaway.", hl: "hl-cyan", crossed: false, editing: false }
           ]
         },
         {
@@ -143,7 +144,7 @@
           title: "Hits of the 80s & 90s",
           targetHours: 2,
           blocks: [
-            { id: 101, text: "[INTRO] Welcome back into the retro zone for the next two hours.", hl: "", editing: false }
+            { id: 101, text: "[INTRO] Welcome back into the retro zone for the next two hours.", hl: "", crossed: false, editing: false }
           ]
         }
       ]
@@ -179,7 +180,7 @@
         const blockSecs = Math.round((words / WPM) * 60);
 
         const card = document.createElement("div");
-        card.className = `script-block group relative p-4 rounded-xl bg-zinc-900/80 border border-zinc-800 transition-all ${block.hl}`;
+        card.className = `script-block group relative p-4 rounded-xl bg-zinc-900/80 border border-zinc-800 transition-all ${block.hl || ''} ${block.crossed ? 'line-crossed' : ''}`;
 
         if (block.editing) {
           card.innerHTML = `
@@ -201,7 +202,7 @@
 
           card.innerHTML = `
             <div class="flex items-start justify-between gap-4">
-              <div class="flex-1 cursor-pointer text-[19px] leading-relaxed" onclick="startInlineEdit(${block.id})">${formatted}</div>
+              <div class="flex-1 cursor-pointer text-[19px] leading-relaxed select-none" onclick="toggleCrossed(${block.id})">${formatted}</div>
               <div class="flex items-center gap-1 opacity-20 group-hover:opacity-100 transition-opacity">
                 <button title="Highlight Yellow" onclick="setBlockHighlight(${block.id}, 'hl-yellow')" class="w-5 h-5 rounded bg-yellow-400/80"></button>
                 <button title="Highlight Cyan" onclick="setBlockHighlight(${block.id}, 'hl-cyan')" class="w-5 h-5 rounded bg-cyan-400/80"></button>
@@ -222,7 +223,7 @@
       });
 
       const totalSecs = Math.round((totalWords / WPM) * 60);
-      const totalHours = totalSecs / 3600;
+      const documentHours = totalSecs / 3600;
       document.getElementById("timeTotal").textContent = formatTime(totalSecs);
       document.getElementById("timeTarget").textContent = currentShow.targetHours + "h";
 
@@ -250,6 +251,16 @@
         return `${h}h ${m}m`;
       }
       return `${m}:${s < 10 ? "0" : ""}${s}`;
+    }
+
+    function toggleCrossed(id) {
+      const show = appState.shows.find(s => s.id === appState.activeShowId);
+      const b = show.blocks.find(x => x.id === id);
+      if (b) {
+        b.crossed = !b.crossed;
+        saveAndSync();
+        render();
+      }
     }
 
     function switchShow(showId) {
@@ -313,7 +324,7 @@
 
     function insertCueTag(tag) {
       const show = appState.shows.find(s => s.id === appState.activeShowId);
-      show.blocks.push({ id: Date.now(), text: `[${tag}] Script text or notes here...`, hl: "", editing: false });
+      show.blocks.push({ id: Date.now(), text: `[${tag}] Script text or notes here...`, hl: "", crossed: false, editing: false });
       saveAndSync();
       render();
     }
@@ -328,7 +339,7 @@
       const text = document.getElementById("blockTextInput").value.trim();
       if (!text) return;
       const show = appState.shows.find(s => s.id === appState.activeShowId);
-      show.blocks.push({ id: Date.now(), text, hl: "", editing: false });
+      show.blocks.push({ id: Date.now(), text, hl: "", crossed: false, editing: false });
       document.getElementById("blockTextInput").value = "";
       closeBlockModal();
       saveAndSync();
@@ -346,7 +357,7 @@
       const hours = parseFloat(document.getElementById("newShowHours").value) || 1;
       if (!name) return;
       const newId = "show_" + Date.now();
-      appState.shows.push({ id: newId, title: name, targetHours: hours, blocks: [{ id: Date.now(), text: "[INTRO] Welcome to " + name, hl: "", editing: false }] });
+      appState.shows.push({ id: newId, title: name, targetHours: hours, blocks: [{ id: Date.now(), text: "[INTRO] Welcome to " + name, hl: "", crossed: false, editing: false }] });
       appState.activeShowId = newId;
       closeNewShowModal();
       saveAndSync();

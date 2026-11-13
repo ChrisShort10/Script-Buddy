@@ -106,8 +106,7 @@
 
   <script>
     // =========================================================================
-    // OPTIONAL CLOUD SYNC: Paste your free Firebase Realtime DB URL below
-    // Example: "https://your-project-default-rtdb.firebaseio.com/script.json"
+    // CLOUD SYNC ENDPOINT
     // =========================================================================
     const FIREBASE_ENDPOINT = "https://script-buddy-v1-default-rtdb.firebaseio.com/script.json";
 
@@ -145,7 +144,7 @@
     function formatTime(sec) {
       const m = Math.floor(sec / 60);
       const s = sec % 60;
-      return ${m}:${s < 10 ? "0" : ""}${s};
+      return `${m}:${s < 10 ? "0" : ""}${s}`;
     }
 
     function render() {
@@ -155,7 +154,7 @@
 
       state.blocks.forEach((block, idx) => {
         const row = document.createElement("div");
-        row.className = script-block group relative p-3.5 rounded-lg bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-800/80 cursor-pointer transition-all ${block.crossed ? "line-crossed" : ""} ${block.hl} ${idx === focusIndex ? "active-block ring-1 ring-indigo-500/40" : ""};
+        row.className = `script-block group relative p-3.5 rounded-lg bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-800/80 cursor-pointer transition-all ${block.crossed ? "line-crossed" : ""} ${block.hl} ${idx === focusIndex ? "active-block ring-1 ring-indigo-500/40" : ""}`;
         
         row.onclick = () => {
           block.crossed = !block.crossed;
@@ -228,7 +227,7 @@
       }
     });
 
-    // Persistence (Local + Optional Firebase Cloud API)
+    // Persistence (Local + Firebase Cloud API)
     async function saveState() {
       localStorage.setItem("onair_script_state", JSON.stringify(state));
       if (FIREBASE_ENDPOINT) {
@@ -239,15 +238,16 @@
             body: JSON.stringify(state)
           });
           document.getElementById("syncBadge").textContent = "CLOUD SYNCED";
-          document.getElementById("syncBadge").className = "text-xs px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 mono";
+          document.getElementById("syncBadgeclassName = "text-xs px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 mono";
         } catch (err) {
           console.error("Cloud sync failed:", err);
+          document.getElementById("syncBadge").textContent = "SYNC ERROR";
+          document.getElementById("syncBadge").className = "text-xs px-2 py-0.5 rounded-full bg-red-950 text-red-400 border border-red-800 mono";
         }
       }
     }
 
     async function loadState() {
-      // Check URL parameter API (?title=...&text=...)
       const params = new URLSearchParams(window.location.search);
       if (params.get("text")) {
         ingestRawText(params.get("title") || "API Push", params.get("text"));
@@ -289,8 +289,8 @@
       document.getElementById("titleInput").value = state.title;
       document.getElementById("scriptInput").value = state.blocks.map(b => b.text).join("\n\n");
       document.getElementById("apiHint").textContent = FIREBASE_ENDPOINT 
-        ? POST/PUT JSON to: ${FIREBASE_ENDPOINT}
-        : ${window.location.origin}${window.location.pathname}?title=MyShow&text=Line%201%0ALine%202;
+        ? `POST/PUT JSON to: ${FIREBASE_ENDPOINT}`
+        : `${window.location.origin}${window.location.pathname}?title=MyShow&text=Line%201%0ALine%202`;
       document.getElementById("importModal").classList.remove("hidden");
     }
 
@@ -299,9 +299,22 @@
     }
 
     function publishScript() {
-      const title = document.getElementById("titleInput").value.trim();
-      const text = document.getElementById("scriptInput").value.trim();
-      if (!text) return;
+      const titleEl = document.getElementById("titleInput");
+      const textEl = document.getElementById("scriptInput");
+      
+      if (!titleEl || !textEl) {
+        console.error("Missing input elements");
+        return;
+      }
+
+      const title = titleEl.value.trim();
+      const text = textEl.value.trim();
+      
+      if (!text) {
+        alert("Please paste some script text first.");
+        return;
+      }
+
       ingestRawText(title, text);
       closeModal();
     }

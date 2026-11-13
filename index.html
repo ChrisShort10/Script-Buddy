@@ -47,7 +47,7 @@
 </head>
 <body class="min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
 
-  <!-- Login Gate Overlay (Hidden by default until auth state is checked) -->
+  <!-- Login Gate Overlay -->
   <div id="loginOverlay" class="fixed inset-0 z-50 bg-zinc-950 flex items-center justify-center p-4 hidden">
     <div class="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-8 shadow-2xl space-y-6">
       <div class="text-center space-y-2">
@@ -226,17 +226,7 @@
   </div>
 
   <script>
-    // Firebase Config & Initialization
-    const firebaseConfig = {
-      databaseURL: "https://script-buddy-v1-default-rtdb.firebaseio.com"
-    };
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-    }
-    const auth = firebase.auth();
-    const FIREBASE_ENDPOINT = "https://script-buddy-v1-default-rtdb.firebaseio.com/broadcast.json";
-    const WPM = 145;
-
+    // State Initializations (Must be declared before functions reference them)
     let appState = {
       activeShowId: "show_morning",
       shows: [
@@ -257,6 +247,21 @@
     let savedSelectedText = "";
     let cachedVoices = [];
     let currentResearchTab = "ai";
+
+    // Firebase Config & Initialization (Replace with your actual Web API Key from Firebase Console)
+    const firebaseConfig = {
+      apiKey: "YOUR_FIREBASE_API_KEY",
+      authDomain: "script-buddy-v1.firebaseapp.com",
+      databaseURL: "https://script-buddy-v1-default-rtdb.firebaseio.com",
+      projectId: "script-buddy-v1"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const auth = firebase.auth();
+    const FIREBASE_ENDPOINT = "https://script-buddy-v1-default-rtdb.firebaseio.com/broadcast.json";
+    const WPM = 145;
 
     // Authentication State Observer
     auth.onAuthStateChanged((user) => {
@@ -749,7 +754,7 @@
         const card = document.createElement("div");
         card.className = "p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 space-y-2";
         card.innerHTML = `
-          <div class="flex items-center justify-between font-bold text-zinc-100 text-sm">${page.title}</div>
+          <div class="font-bold text-zinc-100 text-sm">${page.title}</div>
           <p class="text-xs text-zinc-300 line-clamp-4">${extract}</p>
           <button onclick='injectResearchBlock(${JSON.stringify(htmlBlock)})' class="px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-semibold">+ Add to Script</button>
         `;

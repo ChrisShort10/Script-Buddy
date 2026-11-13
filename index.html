@@ -3,136 +3,254 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OnAir Script Deck</title>
+  <title>OnAir Script Studio Pro</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
     body { font-family: 'Inter', sans-serif; background-color: #09090b; color: #f4f4f5; }
     .mono { font-family: 'JetBrains Mono', monospace; }
-    .line-crossed { text-decoration: line-through; opacity: 0.28; filter: grayscale(100%); }
-    .hl-yellow { background: rgba(250, 204, 21, 0.25); border-left: 3px solid #facc15; padding-left: 12px; }
-    .hl-cyan { background: rgba(34, 211, 238, 0.22); border-left: 3px solid #22d3ee; padding-left: 12px; }
-    .hl-pink { background: rgba(244, 114, 182, 0.22); border-left: 3px solid #f472b6; padding-left: 12px; }
-    .focus-mode .script-block:not(.active-block) { opacity: 0.22; }
+    .hl-yellow { background: rgba(250, 204, 21, 0.22); border-left: 3px solid #facc15; padding-left: 10px; }
+    .hl-cyan { background: rgba(34, 211, 238, 0.22); border-left: 3px solid #22d3ee; padding-left: 10px; }
+    .hl-pink { background: rgba(244, 114, 182, 0.22); border-left: 3px solid #f472b6; padding-left: 10px; }
     .cue-tag {
       display: inline-block; background: #27272a; color: #fb923c; border: 1px solid #3f3f46;
       font-family: 'JetBrains Mono', monospace; font-size: 0.75em; font-weight: 700;
-      padding: 1px 7px; border-radius: 5px; margin-right: 6px; vertical-align: middle;
+      padding: 1px 6px; border-radius: 4px; margin-right: 4px; vertical-align: middle;
     }
+    del { opacity: 0.35; text-decoration: line-through; }
+    .focus-mode .script-block:not(.active-block) { opacity: 0.25; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
 
   <!-- Top SaaS Control Bar -->
-  <header class="sticky top-0 z-30 bg-zinc-950/90 backdrop-blur border-b border-zinc-800 px-5 py-3 flex flex-wrap items-center justify-between gap-4">
+  <header class="sticky top-0 z-30 bg-zinc-950/95 backdrop-blur border-b border-zinc-800 px-5 py-3 flex flex-wrap items-center justify-between gap-4">
     <div class="flex items-center gap-3">
-      <span class="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse"></span>
-      <h1 id="showTitleDisplay" class="font-bold tracking-tight text-zinc-100 text-lg">Show Rundown</h1>
-      <span id="syncBadge" class="text-xs px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 mono">LOCAL MODE</span>
+      <span class="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+      <select id="showSelector" onchange="switchShow(this.value)" class="bg-zinc-900 border border-zinc-700 text-zinc-100 font-bold px-3 py-1.5 rounded-lg text-sm focus:outline-none focus:border-indigo-500">
+        <!-- Populated dynamically -->
+      </select>
+      <span id="syncBadge" class="text-[11px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 mono">LOCAL</span>
     </div>
 
-    <!-- Live Read-Time & Progress Stats -->
-    <div class="flex items-center gap-5 text-sm mono">
-      <div>
-        <span class="text-zinc-500">REMAINING:</span>
-        <span id="timeRemaining" class="text-emerald-400 font-bold">0:00</span>
-      </div>
-      <div class="hidden sm:block">
-        <span class="text-zinc-500">TOTAL:</span>
-        <span id="timeTotal" class="text-zinc-300">0:00</span>
-      </div>
-      <div class="hidden md:block">
-        <span class="text-zinc-500">CLOCK:</span>
-        <span id="liveClock" class="text-indigo-400 font-bold">00:00:00</span>
-      </div>
+    <!-- Backtiming & Live Stats Bar -->
+    <div class="flex items-center gap-4 text-xs mono bg-zinc-900/80 border border-zinc-800 px-3 py-1.5 rounded-lg">
+      <div><span class="text-zinc-500">SCRIPT:</span> <span id="timeTotal" class="text-zinc-200 font-bold">0:00</span></div>
+      <div><span class="text-zinc-500">TARGET:</span> <span id="timeTarget" class="text-indigo-400 font-bold">60m</span></div>
+      <div><span class="text-zinc-500">DELTA:</span> <span id="timeDelta" class="text-emerald-400 font-bold">On Pace</span></div>
+      <div class="hidden sm:block text-zinc-400">| CLOCK: <span id="liveClock" class="text-zinc-200 font-bold">00:00:00</span></div>
     </div>
 
-    <!-- Reader Controls -->
+    <!-- Pro Tools & Actions -->
     <div class="flex items-center gap-2">
-      <button onclick="changeFontSize(-2)" class="px-2.5 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs font-semibold">A-</button>
-      <button onclick="changeFontSize(2)" class="px-2.5 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs font-semibold">A+</button>
-      <button id="focusBtn" onclick="toggleFocusMode()" class="px-3 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs font-medium text-zinc-300">Focus</button>
-      <button onclick="resetMarks()" class="px-3 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs font-medium text-zinc-300">Clear Marks</button>
-      <button onclick="openModal()" class="px-3.5 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-sm">+ Import / API</button>
+      <button onclick="toggleScratchpad()" class="px-3 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 font-medium">Scratchpad</button>
+      <button onclick="window.print()" class="px-3 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 font-medium hidden sm:inline-block">Print PDF</button>
+      <button onclick="openNewShowModal()" class="px-3 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 font-medium">+ New Show</button>
+      <button onclick="openImportModal()" class="px-3.5 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-sm">+ Add Block</button>
     </div>
   </header>
 
-  <!-- Main Teleprompter / Script Canvas -->
-  <main class="flex-1 max-w-4xl w-full mx-auto px-6 py-10">
-    <p class="text-xs text-zinc-500 mb-6 mono">
-      CLICK line to cross out &bull; RIGHT-CLICK (or use buttons) to highlight &bull; SPACEBAR to advance focus
-    </p>
-    <div id="scriptContainer" class="space-y-4 transition-all duration-150" style="font-size: 22px; line-height: 1.65;">
-      <!-- Script lines render here -->
+  <!-- Main Content Workspace -->
+  <main class="flex-1 max-w-4xl w-full mx-auto px-6 py-8 space-y-6">
+    
+    <!-- Quick Cue Palette Helper Bar -->
+    <div class="bg-zinc-900/60 border border-zinc-800 p-2.5 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs">
+      <div class="text-zinc-400 font-medium">Quick Cues:</div>
+      <div class="flex flex-wrap gap-1.5">
+        <button onclick="insertCueTag('INTRO')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[INTRO]</button>
+        <button onclick="insertCueTag('SFX: Bed')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[SFX: Bed]</button>
+        <button onclick="insertCueTag('AD BREAK')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[AD BREAK]</button>
+        <button onclick="insertCueTag('PHONEER')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[PHONEER]</button>
+        <button onclick="insertCueTag('TIME CHECK')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[TIME CHECK]</button>
+        <button onclick="insertCueTag('OUTRO')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[OUTRO]</button>
+      </div>
+      <div class="text-zinc-500 text-[11px] hidden md:block">Tip: Wrap text in ~~strikethrough~~ for partial cross-out</div>
+    </div>
+
+    <!-- Script Blocks Container -->
+    <div id="blocksContainer" class="space-y-4">
+      <!-- Rendered dynamically -->
     </div>
   </main>
 
-  <!-- Quick-Paste & API Modal -->
-  <div id="importModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-zinc-900 border border-zinc-700 rounded-xl max-w-2xl w-full p-6 shadow-2xl space-y-4">
+  <!-- Scratchpad / Presenter Notes Drawer -->
+  <div id="scratchpadDrawer" class="fixed right-0 top-0 h-full w-80 bg-zinc-950 border-l border-zinc-800 z-40 p-5 shadow-2xl transform translate-x-full transition-transform duration-200 flex flex-col">
+    <div class="flex justify-between items-center mb-3">
+      <h3 class="font-bold text-sm text-zinc-200">Presenter Scratchpad & Notes</h3>
+      <button onclick="toggleScratchpad()" class="text-zinc-400 hover:text-white text-lg">&times;</button>
+    </div>
+    <textarea id="scratchpadText" oninput="saveScratchpad()" placeholder="Jot down caller names, contest numbers, quick reminders, or ad-libs here..." class="w-full flex-1 bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500 font-mono resize-none"></textarea>
+    <div class="text-[11px] text-zinc-500 mt-2">Auto-saves to browser storage.</div>
+  </div>
+
+  <!-- Add / Edit Block Modal -->
+  <div id="blockModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-zinc-900 border border-zinc-700 rounded-xl max-w-xl w-full p-6 shadow-2xl space-y-4">
       <div class="flex justify-between items-center">
-        <h2 class="text-lg font-bold text-white">Push New Script to Server</h2>
-        <button onclick="closeModal()" class="text-zinc-400 hover:text-white text-xl">&times;</button>
+        <h2 id="modalTitle" class="text-lg font-bold text-white">Add Script Block</h2>
+        <button onclick="closeBlockModal()" class="text-zinc-400 hover:text-white text-xl">&times;</button>
       </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label class="block text-xs text-zinc-400 mb-1">Show / Segment Title</label>
-          <input id="titleInput" type="text" placeholder="e.g., Morning Drive - 08:30 Link" class="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
-        </div>
-        <div>
-          <label class="block text-xs text-zinc-400 mb-1">Server PIN (Optional Security)</label>
-          <input id="pinInput" type="password" placeholder="Set or enter PIN" class="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
-        </div>
-      </div>
-
       <div>
-        <label class="block text-xs text-zinc-400 mb-1">Paste Script (Blank lines create separate clickable blocks; use [TAGS] for cues)</label>
-        <textarea id="scriptInput" rows="9" placeholder="[INTRO BED] Welcome back to the show...&#10;&#10;[STORY 1] Big weather update coming through this morning...&#10;&#10;[OUTRO] Coming up after the break..." class="w-full bg-zinc-950 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-100 font-mono focus:outline-none focus:border-indigo-500"></textarea>
+        <label class="block text-xs text-zinc-400 mb-1">Block Text (WYSIWYG Markdown & Cues Supported)</label>
+        <textarea id="blockTextInput" rows="6" placeholder="[INTRO] Welcome back to the show... Use ~~strikethrough~~ for specific lines." class="w-full bg-zinc-950 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-100 font-mono focus:outline-none focus:border-indigo-500"></textarea>
       </div>
-
-      <!-- API Endpoint Helper -->
-      <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-xs text-zinc-400 space-y-1">
-        <div class="font-semibold text-zinc-300">Direct API / URL Push Endpoint:</div>
-        <p class="mono break-all text-indigo-400" id="apiHint"></p>
-      </div>
-
       <div class="flex justify-end gap-2 pt-2">
-        <button onclick="closeModal()" class="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm text-zinc-300">Cancel</button>
-        <button onclick="publishScript()" class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white">Publish to Reader</button>
+        <button onclick="closeBlockModal()" class="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm text-zinc-300">Cancel</button>
+        <button onclick="saveBlockForm()" class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white">Save Block</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- New Show Modal -->
+  <div id="showModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-zinc-900 border border-zinc-700 rounded-xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-lg font-bold text-white">Create New Broadcast Show</h2>
+        <button onclick="closeNewShowModal()" class="text-zinc-400 hover:text-white text-xl">&times;</button>
+      </div>
+      <div>
+        <label class="block text-xs text-zinc-400 mb-1">Show Name</label>
+        <input id="newShowName" type="text" placeholder="e.g., Hits of the 80s & 90s" class="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
+      </div>
+      <div>
+        <label class="block text-xs text-zinc-400 mb-1">Target Duration (Minutes)</label>
+        <input id="newShowDuration" type="number" value="60" class="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeNewShowModal()" class="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm text-zinc-300">Cancel</button>
+        <button onclick="createNewShow()" class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white">Create Show</button>
       </div>
     </div>
   </div>
 
   <script>
-    const FIREBASE_ENDPOINT = "https://script-buddy-v1-default-rtdb.firebaseio.com/script.json";
+    // =========================================================================
+    // FIREBASE ENDPOINT & APP STATE
+    // =========================================================================
+    const FIREBASE_ENDPOINT = "https://script-buddy-v1-default-rtdb.firebaseio.com/broadcast.json";
+    const WPM = 145; // Standard broadcast speech pace
 
-    const WPM = 145;
-    let fontSize = 22;
-    let focusIndex = 0;
-    let state = {
-      title: "Morning Show — Link 1",
-      blocks: [
-        { id: 1, text: "[INTRO BED - 15s] Good morning! Plenty to get through over the next hour.", crossed: false, hl: "" },
-        { id: 2, text: "[HEADLINE] First up, ferry schedules have been updated for the weekend—make sure you check before heading down.", crossed: false, hl: "hl-yellow" },
-        { id: 3, text: "[MUSIC IN] Let's get into some new tracks first, kicking off with Yard Act.", crossed: false, hl: "" }
+    let appState = {
+      activeShowId: "show_morning",
+      shows: [
+        {
+          id: "show_morning",
+          title: "Morning Drive & News",
+          targetMinutes: 60,
+          blocks: [
+            { id: 1, text: "[INTRO BED - 15s] Good morning Stanley! Beautiful crisp morning out there.", hl: "hl-yellow", editing: false },
+            { id: 2, text: "[HEADLINE] Ferry schedules have been updated for the weekend. ~~Double check departures online.~~ Normal service resumes Monday.", hl: "", editing: false },
+            { id: 3, text: "[MUSIC] Let's kick things off with a classic track.", hl: "", editing: false }
+          ]
+        },
+        {
+          id: "show_80s90s",
+          title: "Hits of the 80s & 90s",
+          targetMinutes: 120,
+          blocks: [
+            { id: 101, text: "[INTRO] Welcome back into the retro zone for the next two hours of non-stop hits.", hl: "hl-cyan", editing: false }
+          ]
+        }
       ]
     };
 
+    let editingBlockId = null;
+
+    // Studio Clock
     setInterval(() => {
       document.getElementById("liveClock").textContent = new Date().toTimeString().split(" ")[0];
     }, 1000);
 
-    function formatText(raw) {
-      return raw.replace(/\[([^\]]+)\]/g, '<span class="cue-tag">$1</span>');
-    }
+    // Render App
+    function render() {
+      // Populate Show Dropdown
+      const selector = document.getElementById("showSelector");
+      selector.innerHTML = "";
+      appState.shows.forEach(show => {
+        const opt = document.createElement("option");
+        opt.value = show.id;
+        opt.textContent = `${show.title} (${show.targetMinutes}m)`;
+        if (show.id === appState.activeShowId) opt.selected = true;
+        selector.appendChild(opt);
+      });
 
-    function calcSeconds(blocks) {
-      const words = blocks.reduce((acc, b) => {
-        const clean = b.text.replace(/\[[^\]]+\]/g, "").trim();
-        return acc + (clean ? clean.split(/\s+/).length : 0);
-      }, 0);
-      return Math.round((words / WPM) * 60);
+      const currentShow = appState.shows.find(s => s.id === appState.activeShowId) || appState.shows[0];
+      document.getElementById("timeTarget  targetMinutes").textContent = currentShow.targetMinutes + "m";
+
+      const container = document.getElementById("blocksContainer");
+      container.innerHTML = "";
+
+      let totalWords = 0;
+
+      currentShow.blocks.forEach((block, idx) => {
+        // Calculate block word count & read time
+        const cleanText = block.text.replace(/\[[^\]]+\]/g, "").replace(/~~.*?~~/g, "").trim();
+        const words = cleanText ? cleanText.split(/\s+/).length : 0;
+        totalWords += words;
+        const blockSecs = Math.round((words / WPM) * 60);
+
+        const card = document.createElement("div");
+        card.className = `script-block group relative p-4 rounded-xl bg-zinc-900/80 border border-zinc-800 transition-all ${block.hl}`;
+
+        if (block.editing) {
+          card.innerHTML = `
+            <div class="space-y-3">
+              <textarea id="edit_${block.id}" rows="3" class="w-full bg-zinc-950 border border-indigo-500 rounded-lg p-2.5 text-sm text-zinc-100 font-mono focus:outline-none">${block.text}</textarea>
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-zinc-500">Est. ~${blockSecs}s (${words} words)</span>
+                <div class="flex gap-2">
+                  <button onclick="cancelInlineEdit(${block.id})" class="px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded">Cancel</button>
+                  <button onclick="saveInlineEdit(${block.id})" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded">Save</button>
+                </div>
+              </div>
+            </div>
+          `;
+        } else {
+          // Format markdown cues and strikethroughs
+          let formatted = block.text
+            .replace(/\[([^\]]+)\]/g, '<span class="cue-tag">$1</span>')
+            .replace(/~~(.*?)~~/g, '<del>$1</del>');
+
+          card.innerHTML = `
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex-1 cursor-pointer text-[19px] leading-relaxed" onclick="startInlineEdit(${block.id})">${formatted}</div>
+              <div class="flex items-center gap-1 opacity-20 group-hover:opacity-100 transition-opacity">
+                <button title="Highlight Yellow" onclick="setBlockHighlight(${block.id}, 'hl-yellow')" class="w-5 h-5 rounded bg-yellow-400/80"></button>
+                <button title="Highlight Cyan" onclick="setBlockHighlight(${block.id}, 'hl-cyan')" class="w-5 h-5 rounded bg-cyan-400/80"></button>
+                <button title="Highlight Pink" onclick="setBlockHighlight(${block.id}, 'hl-pink')" class="w-5 h-5 rounded bg-pink-400/80"></button>
+                <button title="Clear Highlight" onclick="setBlockHighlight(${block.id}, '')" class="px-1.5 h-5 rounded bg-zinc-800 text-[10px] text-zinc-400">✕</button>
+                <button title="Move Up" onclick="moveBlock(${block.id}, -1)" class="px-1.5 py-1 bg-zinc-800 text-zinc-300 rounded text-xs">▲</button>
+                <button title="Move Down" onclick="moveBlock(${block.id}, 1)" class="px-1.5 py-1 bg-zinc-800 text-zinc-300 rounded text-xs">▼</button>
+                <button title="Delete" onclick="deleteBlock(${block.id})" class="px-1.5 py-1 bg-red-950/60 text-red-400 rounded text-xs ml-1">🗑</button>
+              </div>
+            </div>
+            <div class="mt-2.5 pt-2 border-t border-zinc-800/60 flex items-center justify-between text-[11px] mono text-zinc-500">
+              <span>BLOCK #${idx + 1} &bull; EST. <strong class="text-zinc-400">${blockSecs}s</strong> (${words} words)</span>
+              <span class="text-indigo-400 hover:underline cursor-pointer" onclick="startInlineEdit(${block.id})">Edit Inline</span>
+            </div>
+          `;
+        }
+        container.appendChild(card);
+      });
+
+      // Total Time & Backtiming Delta
+      const totalSecs = Math.round((totalWords / WPM) * 60);
+      const totalMins = totalSecs / 60;
+      document.getElementById("timeTotal").textContent = formatTime(totalSecs);
+      document.getElementById("timeTarget").textContent = currentShow.targetMinutes + "m";
+
+      const deltaMins = Math.round((totalMins - currentShow.targetMinutes) * 10);
+      const deltaEl = document.getElementById("timeDelta");
+      if (Math.abs(deltaMins) < 2) {
+        deltaEl.textContent = "On Pace";
+        deltaEl.className = "text-emerald-400 font-bold";
+      } else if (deltaMins > 0) {
+        deltaEl.textContent = `+${(deltaMins/10).toFixed(1)}m Over`;
+        deltaEl.className = "text-amber-400 font-bold";
+      } else {
+        deltaEl.textContent = `${(deltaMins/10).toFixed(1)}m Under`;
+        deltaEl.className = "text-cyan-400 font-bold";
+      }
     }
 
     function formatTime(sec) {
@@ -141,177 +259,160 @@
       return `${m}:${s < 10 ? "0" : ""}${s}`;
     }
 
-    function render() {
-      const container = document.getElementById("scriptContainer");
-      document.getElementById("showTitleDisplay").textContent = state.title;
-      container.innerHTML = "";
-
-      state.blocks.forEach((block, idx) => {
-        const row = document.createElement("div");
-        row.className = `script-block group relative p-3.5 rounded-lg bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-800/80 cursor-pointer transition-all ${block.crossed ? "line-crossed" : ""} ${block.hl} ${idx === focusIndex ? "active-block ring-1 ring-indigo-500/40" : ""}`;
-        
-        row.onclick = () => {
-          block.crossed = !block.crossed;
-          focusIndex = idx;
-          saveState();
-          render();
-        };
-
-        row.oncontextmenu = (e) => {
-          e.preventDefault();
-          cycleHighlight(block);
-        };
-
-        row.innerHTML = `
-          <div class="pr-24">${formatText(block.text)}</div>
-          <div class="opacity-0 group-hover:opacity-100 transition-opacity absolute right-3 top-3 flex gap-1.5" onclick="event.stopPropagation()">
-            <button title="Yellow Highlight" onclick="setHighlight(${idx}, 'hl-yellow')" class="w-5 h-5 rounded bg-yellow-400/80 hover:scale-110"></button>
-            <button title="Cyan Highlight" onclick="setHighlight(${idx}, 'hl-cyan')" class="w-5 h-5 rounded bg-cyan-400/80 hover:scale-110"></button>
-            <button title="Pink Highlight" onclick="setHighlight(${idx}, 'hl-pink')" class="w-5 h-5 rounded bg-pink-400/80 hover:scale-110"></button>
-            <button title="Clear Highlight" onclick="setHighlight(${idx}, '')" class="px-1.5 h-5 rounded bg-zinc-700 text-[10px] text-white">✕</button>
-          </div>
-        `;
-        container.appendChild(row);
-      });
-
-      document.getElementById("timeTotal").textContent = formatTime(calcSeconds(state.blocks));
-      document.getElementById("timeRemaining").textContent = formatTime(calcSeconds(state.blocks.filter(b => !b.crossed)));
-    }
-
-    function setHighlight(idx, colorClass) {
-      state.blocks[idx].hl = state.blocks[idx].hl === colorClass ? "" : colorClass;
-      saveState();
+    // Actions & State Management
+    function switchShow(showId) {
+      appState.activeShowId = showId;
+      saveAndSync();
       render();
     }
 
-    function cycleHighlight(block) {
-      const order = ["", "hl-yellow", "hl-cyan", "hl-pink"];
-      block.hl = order[(order.indexOf(block.hl) + 1) % order.length];
-      saveState();
+    function startInlineEdit(id) {
+      const show = appState.shows.find(s => s.id === appState.activeShowId);
+      show.blocks.forEach(b => b.editing = (b.id === id));
       render();
     }
 
-    function resetMarks() {
-      state.blocks.forEach(b => { b.crossed = false; b.hl = ""; });
-      focusIndex = 0;
-      saveState();
+    function cancelInlineEdit(id) {
+      const show = appState.shows.find(s => s.id === appState.activeShowId);
+      const b = show.blocks.find(x => x.id === id);
+      if (b) b.editing = false;
       render();
     }
 
-    function changeFontSize(delta) {
-      fontSize = Math.min(42, Math.max(14, fontSize + delta));
-      document.getElementById("scriptContainer").style.fontSize = fontSize + "px";
-    }
-
-    function toggleFocusMode() {
-      document.body.classList.toggle("focus-mode");
-      document.getElementById("focusBtn").classList.toggle("bg-indigo-600");
-    }
-
-    window.addEventListener("keydown", (e) => {
-      if (e.code === "Space" && document.getElementById("importModal").classList.contains("hidden")) {
-        e.preventDefault();
-        if (state.blocks[focusIndex]) {
-          state.blocks[focusIndex].crossed = true;
-          focusIndex = Math.min(state.blocks.length - 1, focusIndex + 1);
-          saveState();
-          render();
-        }
+    function saveInlineEdit(id) {
+      const show = appState.shows.find(s => s.id === appState.activeShowId);
+      const b = show.blocks.find(x => x.id === id);
+      const val = document.getElementById(`edit_${id}`).value.trim();
+      if (b && val) {
+        b.text = val;
+        b.editing = false;
+        saveAndSync();
+        render();
       }
-    });
+    }
 
-    async function saveState() {
-      localStorage.setItem("onair_script_state", JSON.stringify(state));
+    function setBlockHighlight(id, hlClass) {
+      const show = appState.shows.find(s => s.id === appState.activeShowId);
+      const b = show.blocks.find(x => x.id === id);
+      if (b) {
+        b.hl = b.hl === hlClass ? "" : hlClass;
+        saveAndSync();
+        render();
+      }
+    }
+
+    function moveBlock(id, direction) {
+      const show = appState.shows.find(s => s.id === appState.activeShowId);
+      const idx = show.blocks.findIndex(b => b.id === id);
+      if ((idx + direction >= 0) && (idx + direction < show.blocks.length)) {
+        const item = show.blocks.splice(idx, 1)[0];
+        show.blocks.splice(idx + direction, 0, item);
+        saveAndSync();
+        render();
+      }
+    }
+
+    function deleteBlock(id) {
+      const show = appState.shows.find(s => s.id === appState.activeShowId);
+      show.blocks = show.blocks.filter(b => b.id !== id);
+      saveAndSync();
+      render();
+    }
+
+    function insertCueTag(tag) {
+      const show = appState.shows.find(s => s.id === appState.activeShowId);
+      show.blocks.push({ id: Date.now(), text: `[${tag}] New script link or notes here...`, hl: "", editing: false });
+      saveAndSync();
+      render();
+    }
+
+    // Modals
+    function openImportModal() {
+      document.getElementById("blockModal").classList.remove("hidden");
+    }
+    function closeBlockModal() {
+      document.getElementById("blockModal").classList.add("hidden");
+    }
+    function saveBlockForm() {
+      const text = document.getElementById("blockTextInput").value.trim();
+      if (!text) return;
+      const show = appState.shows.find(s => s.id === appState.activeShowId);
+      show.blocks.push({ id: Date.now(), text, hl: "", editing: false });
+      document.getElementById("blockTextInput").value = "";
+      closeBlockModal();
+      saveAndSync();
+      render();
+    }
+
+    function openNewShowModal() {
+      document.getElementById("showModal").classList.remove("hidden");
+    }
+    function closeNewShowModal() {
+      document.getElementById("showModal").classList.add("hidden");
+    }
+    function createNewShow() {
+      const name = document.getElementById("newShowName").value.trim();
+      const mins = parseInt(document.getElementById("newShowDuration").value) || 60;
+      if (!name) return;
+      const newId = "show_" + Date.now();
+      appState.shows.push({ id: newId, title: name, targetMinutes: mins, blocks: [{ id: Date.now(), text: "[INTRO] Welcome to " + name, hl: "", editing: false }] });
+      appState.activeShowId = newId;
+      closeNewShowModal();
+      saveAndSync();
+      render();
+    }
+
+    // Scratchpad Drawer
+    function toggleScratchpad() {
+      const drawer = document.getElementById("scratchpadDrawer");
+      drawer.classList.toggle("translate-x-full");
+    }
+    function saveScratchpad() {
+      localStorage.setItem("onair_scratchpad", document.getElementById("scratchpadText").value);
+    }
+    if (localStorage.getItem("onair_scratchpad")) {
+      document.getElementById("scratchpadText").value = localStorage.getItem("onair_scratchpad");
+    }
+
+    // Cloud & Local Sync
+    async function saveAndSync() {
+      localStorage.setItem("onair_app_state", JSON.stringify(appState));
       if (FIREBASE_ENDPOINT) {
         try {
           await fetch(FIREBASE_ENDPOINT, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(state)
+            body: JSON.stringify(appState)
           });
           const badge = document.getElementById("syncBadge");
           badge.textContent = "CLOUD SYNCED";
-          badge.className = "text-xs px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 mono";
+          badge.className = "text-[11px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 mono";
         } catch (err) {
-          console.error("Cloud sync failed:", err);
           const badge = document.getElementById("syncBadge");
-          badge.textContent = "SYNC ERROR";
-          badge.className = "text-xs px-2 py-0.5 rounded-full bg-red-950 text-red-400 border border-red-800 mono";
+          badge.textContent = "LOCAL OFFLINE";
+          badge.className = "text-[11px] px-2 py-0.5 rounded-full bg-amber-950 text-amber-400 border border-amber-800 mono";
         }
       }
     }
 
-    async function loadState() {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("text")) {
-        ingestRawText(params.get("title") || "API Push", params.get("text"));
-        window.history.replaceState({}, document.title, window.location.pathname);
-        return;
-      }
-
+    async function initLoad() {
       if (FIREBASE_ENDPOINT) {
         try {
           const res = await fetch(FIREBASE_ENDPOINT);
           const data = await res.json();
-          if (data && data.blocks) {
-            state = data;
-            const badge = document.getElementById("syncBadge");
-            badge.textContent = "CLOUD LIVE";
-            badge.className = "text-xs px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 mono";
+          if (data && data.shows) {
+            appState = data;
             render();
             return;
           }
-        } catch (e) { console.warn("Using local fallback"); }
+        } catch (e) { console.warn("Using local storage fallback"); }
       }
-
-      const saved = localStorage.getItem("onair_script_state");
-      if (saved) state = JSON.parse(saved);
+      const saved = localStorage.getItem("onair_app_state");
+      if (saved) appState = JSON.parse(saved);
       render();
     }
 
-    function ingestRawText(title, rawText) {
-      const lines = rawText.split(/\n\s*\n|\n/).map(l => l.trim()).filter(Boolean);
-      state = {
-        title: title || "Live Script",
-        blocks: lines.map((text, i) => ({ id: Date.now() + i, text, crossed: false, hl: "" }))
-      };
-      focusIndex = 0;
-      saveState();
-      render();
-    }
-
-    function openModal() {
-      document.getElementById("titleInput").value = state.title;
-      document.getElementById("scriptInput").value = state.blocks.map(b => b.text).join("\n\n");
-      document.getElementById("apiHint").textContent = FIREBASE_ENDPOINT 
-        ? `POST/PUT JSON to: ${FIREBASE_ENDPOINT}`
-        : `${window.location.origin}${window.location.pathname}?title=MyShow&text=Line%201%0ALine%202`;
-      document.getElementById("importModal").classList.remove("hidden");
-    }
-
-    function closeModal() {
-      document.getElementById("importModal").classList.add("hidden");
-    }
-
-    function publishScript() {
-      const titleEl = document.getElementById("titleInput");
-      const textEl = document.getElementById("scriptInput");
-      
-      if (!titleEl || !textEl) return;
-
-      const title = titleEl.value.trim();
-      const text = textEl.value.trim();
-      
-      if (!text) {
-        alert("Please paste some script text first.");
-        return;
-      }
-
-      ingestRawText(title, text);
-      closeModal();
-    }
-
-    loadState();
+    initLoad();
   </script>
 </body>
 </html>

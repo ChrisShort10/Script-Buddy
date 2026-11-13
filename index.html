@@ -33,6 +33,13 @@
       padding: 1px 7px; border-radius: 5px; margin-right: 6px; vertical-align: middle;
     }
 
+    .meta-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);
+      font-family: 'JetBrains Mono', monospace; font-size: 0.7em; font-weight: 600;
+      padding: 2px 6px; border-radius: 4px; margin-top: 6px;
+    }
+
     /* Floating Selection Toolbar */
     #selectionToolbar {
       position: absolute; display: none; z-index: 100;
@@ -63,7 +70,7 @@
       <select id="showSelector" onchange="switchShow(this.value)" class="bg-zinc-900 border border-zinc-700 text-zinc-100 font-bold px-3 py-1.5 rounded-lg text-sm focus:outline-none focus:border-indigo-500">
         <!-- Populated dynamically -->
       </select>
-      <button onclick="openShowManagerModal()" class="px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 font-medium" title="Manage, Clone, Rename, or Delete Shows">Manage Shows</button>
+      <button onclick="openShowManagerModal()" class="px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 font-medium">Manage Shows</button>
       <span id="syncBadge" class="text-[11px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 mono">LOCAL</span>
     </div>
 
@@ -133,7 +140,7 @@
       </div>
     </div>
 
-    <!-- News Category Selector (Visible only in News tab) -->
+    <!-- News Category Selector -->
     <div id="newsCategoryBox" class="hidden space-y-2 mb-3">
       <div class="flex gap-1.5">
         <button onclick="loadNewsFeed('general')" id="news_btn_general" class="flex-1 py-1.5 rounded bg-zinc-800 border border-zinc-700 text-xs text-zinc-200 font-semibold">World News</button>
@@ -225,8 +232,8 @@
           title: "Morning Drive & News",
           targetHours: 1,
           blocks: [
-            { id: 1, html: '<span class="cue-tag">[INTRO BED]</span> Good morning Stanley!', blackout: false },
-            { id: 2, html: '<span class="cue-tag">[COMPETITION]</span> Line 3 is John for the morning mystery voice giveaway.', blackout: false }
+            { id: 1, html: '<span class="cue-tag">[INTRO BED]</span> Good morning Stanley!<br><span class="meta-badge">📅 2026-11-13 08:00 &bull; Studio Live</span>', blackout: false },
+            { id: 2, html: '<span class="cue-tag">[COMPETITION]</span> Line 3 is John for the morning mystery voice giveaway.<br><span class="meta-badge">📅 2026-11-13 08:15 &bull; Contest Active</span>', blackout: false }
           ]
         },
         {
@@ -234,7 +241,7 @@
           title: "Hits of the 80s & 90s",
           targetHours: 2,
           blocks: [
-            { id: 101, html: '<span class="cue-tag">[INTRO]</span> Welcome back into the retro zone for the next two hours.', blackout: false }
+            { id: 101, html: '<span class="cue-tag">[INTRO]</span> Welcome back into the retro zone for the next two hours.<br><span class="meta-badge">📅 2026-11-13 10:00 &bull; Retro Bed</span>', blackout: false }
           ]
         }
       ]
@@ -246,7 +253,6 @@
     let cachedVoices = [];
     let currentResearchTab = "ai";
 
-    // Preload UK English TTS Voices
     function loadVoices() {
       if ('speechSynthesis' in window) {
         cachedVoices = window.speechSynthesis.getVoices();
@@ -262,7 +268,7 @@
     }, 1000);
 
     // =========================================================================
-    // FLOATING SELECTION TOOLBAR (HIGHLIGHT, STRIKE, UK TTS, LOOKUP)
+    // FLOATING SELECTION TOOLBAR
     // =========================================================================
     function updateSelectionToolbar() {
       const toolbar = document.getElementById("selectionToolbar");
@@ -423,7 +429,7 @@
         currentShow.blocks.forEach((block, idx) => {
           const tempDiv = document.createElement("div");
           tempDiv.innerHTML = block.html;
-          tempDiv.querySelectorAll(".cue-tag, .strikethrough").forEach(el => el.remove());
+          tempDiv.querySelectorAll(".cue-tag, .strikethrough, .meta-badge").forEach(el => el.remove());
           const cleanText = (tempDiv.textContent || tempDiv.innerText || "").trim();
           const words = cleanText ? cleanText.split(/\s+/).length : 0;
           if (!block.blackout) totalWords += words;
@@ -539,12 +545,13 @@
       const hours = parseFloat(hoursInput.value) || 1;
       if (!name) return;
 
+      const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 16);
       const newId = "show_" + Date.now();
       appState.shows.push({
         id: newId,
         title: name,
         targetHours: hours,
-        blocks: [{ id: Date.now(), html: `<span class="cue-tag">[INTRO]</span> Welcome to ${name}`, blackout: false }]
+        blocks: [{ id: Date.now(), html: `<span class="cue-tag">[INTRO]</span> Welcome to ${name}<br><span class="meta-badge">📅 ${nowStr} &bull; Created</span>`, blackout: false }]
       });
       appState.activeShowId = newId;
       nameInput.value = "";
@@ -614,7 +621,7 @@
     }
 
     // =========================================================================
-    // LIVE INTERNET RESEARCH & NEWS PLUGINS
+    // LIVE INTERNET RESEARCH & NEWS PLUGINS (WITH TIMESTAMP METADATA)
     // =========================================================================
     function toggleResearchDock() {
       const drawer = document.getElementById("researchDrawer");
@@ -672,8 +679,7 @@
       const ddg = await ddgRes.json();
 
       let summary = ddg.AbstractText || ddg.Answer || "";
-      let sourceName = ddg.AbstractSource || "Instant Web Overview";
-      let sourceUrl = ddg.AbstractURL || `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+      let sourceName = ddg.AbstractSource || "Web Overview";
 
       if (!summary) {
         const wikiSearch = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`);
@@ -683,8 +689,7 @@
           const sumRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topTitle)}`);
           const sumJson = await sumRes.json();
           summary = sumJson.extract || "";
-          sourceName = `Web & Wiki Overview: ${topTitle}`;
-          sourceUrl = sumJson.content_urls?.desktop?.page || sourceUrl;
+          sourceName = `Wikipedia: ${topTitle}`;
         }
       }
 
@@ -698,15 +703,17 @@
         return;
       }
 
-      const safeInsert = `[INFO: ${query.toUpperCase()}] ${summary}`;
+      const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 16);
+      const htmlBlock = `<span class="cue-tag">[INFO: ${query.toUpperCase()}]</span> ${summary}<br><span class="meta-badge">📅 ${nowStr} &bull; Source: ${sourceName}</span>`;
+      
       container.innerHTML = `
         <div class="p-4 rounded-xl bg-zinc-900 border border-zinc-800 space-y-3">
           <div class="flex items-center justify-between">
             <span class="text-[11px] mono text-indigo-400 font-bold">✨ AI / WEB OVERVIEW</span>
-            <a href="${sourceUrl}" target="_blank" class="text-[11px] text-zinc-400 hover:text-white underline">${sourceName} ↗</a>
+            <span class="text-[11px] text-zinc-400">${sourceName}</span>
           </div>
           <p class="text-zinc-200 leading-relaxed text-sm">${summary}</p>
-          <button onclick='injectResearchBlock(${JSON.stringify(safeInsert)})' class="w-full py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold">+ Insert into Active Show</button>
+          <button onclick='injectResearchBlock(${JSON.stringify(htmlBlock)})' class="w-full py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold">+ Insert into Active Show</button>
         </div>
       `;
     }
@@ -726,7 +733,8 @@
         const mins = Math.floor((track.trackTimeMillis || 0) / 60000);
         const secs = Math.floor(((track.trackTimeMillis || 0) % 60000) / 1000);
         const dur = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-        const backAnnounce = `[MUSIC INFO] That was "${track.trackName}" by ${track.artistName}, released in ${year} on the album ${track.collectionName} (${track.primaryGenreName}, ${dur}).`;
+        const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 16);
+        const htmlBlock = `<span class="cue-tag">[MUSIC INFO]</span> That was "${track.trackName}" by ${track.artistName}, released in ${year} on the album ${track.collectionName} (${track.primaryGenreName}, ${dur}).<br><span class="meta-badge">📅 ${nowStr} &bull; Apple Music &bull; ${dur}</span>`;
 
         const item = document.createElement("div");
         item.className = "p-3 rounded-xl bg-zinc-900 border border-zinc-800 flex gap-3 items-start";
@@ -736,7 +744,7 @@
             <div class="font-bold text-zinc-100 text-sm truncate">${track.trackName}</div>
             <div class="text-xs text-indigo-400 truncate">${track.artistName} &bull; ${year}</div>
             <div class="text-[11px] text-zinc-400 truncate">${track.collectionName} (${track.primaryGenreName} &bull; ${dur})</div>
-            <button onclick='injectResearchBlock(${JSON.stringify(backAnnounce)})' class="mt-1.5 px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-semibold">+ Insert Back-Announce</button>
+            <button onclick='injectResearchBlock(${JSON.stringify(htmlBlock)})' class="mt-1.5 px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-semibold">+ Insert Back-Announce</button>
           </div>
         `;
         container.appendChild(item);
@@ -757,7 +765,8 @@
         const sumRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(hit.title)}`);
         const page = await sumRes.json();
         const extract = page.extract || hit.snippet.replace(/<[^>]+>/g, "");
-        const scriptSnippet = `[FACT CHECK: ${page.title}] ${extract}`;
+        const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 16);
+        const htmlBlock = `<span class="cue-tag">[FACT CHECK: ${page.title}]</span> ${extract}<br><span class="meta-badge">📅 ${nowStr} &bull; Wikipedia</span>`;
 
         const card = document.createElement("div");
         card.className = "p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 space-y-2";
@@ -767,7 +776,7 @@
             <a href="${page.content_urls?.desktop?.page || '#'}" target="_blank" class="text-[11px] text-indigo-400 hover:underline">Wiki ↗</a>
           </div>
           <p class="text-xs text-zinc-300 leading-relaxed line-clamp-4">${extract}</p>
-          <button onclick='injectResearchBlock(${JSON.stringify(scriptSnippet)})' class="px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-semibold">+ Add to Script</button>
+          <button onclick='injectResearchBlock(${JSON.stringify(htmlBlock)})' class="px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-semibold">+ Add to Script</button>
         `;
         container.appendChild(card);
       }
@@ -803,7 +812,8 @@
         container.innerHTML = "";
         data.items.slice(0, 8).forEach(item => {
           const cleanDesc = (item.description || "").replace(/<[^>]+>/g, "").trim();
-          const newsBlockText = `[${selected.label}] ${item.title}. ${cleanDesc}`;
+          const pubDateStr = item.pubDate ? item.pubDate.replace('T', ' ').slice(0, 16) : new Date().toISOString().replace('T', ' ').slice(0, 16);
+          const htmlBlock = `<span class="cue-tag">[${selected.label}]</span> <strong>${item.title}</strong>. ${cleanDesc}<br><span class="meta-badge">📅 Published: ${pubDateStr} &bull; RSS Source</span>`;
 
           const card = document.createElement("div");
           card.className = "p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 space-y-2";
@@ -813,8 +823,8 @@
             </div>
             <p class="text-[11px] text-zinc-400 line-clamp-3">${cleanDesc}</p>
             <div class="flex items-center justify-between pt-1">
-              <span class="text-[10px] mono text-zinc-500">${item.pubDate ? item.pubDate.slice(0, 16) : ''}</span>
-              <button onclick='injectResearchBlock(${JSON.stringify(newsBlockText)})' class="px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-semibold">+ Insert Headline</button>
+              <span class="text-[10px] mono text-emerald-400">📅 ${pubDateStr}</span>
+              <button onclick='injectResearchBlock(${JSON.stringify(htmlBlock)})' class="px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-semibold">+ Insert Headline</button>
             </div>
           `;
           container.appendChild(card);
@@ -824,12 +834,11 @@
       }
     }
 
-    function injectResearchBlock(rawText) {
+    function injectResearchBlock(htmlContent) {
       const show = appState.shows.find(s => s.id === appState.activeShowId);
       if (!show) return;
       if (!show.blocks) show.blocks = [];
-      const formattedHtml = rawText.replace(/\[([^\]]+)\]/g, '<span class="cue-tag">[$1]</span>');
-      show.blocks.push({ id: Date.now(), html: formattedHtml, blackout: false });
+      show.blocks.push({ id: Date.now(), html: htmlContent, blackout: false });
       saveAndSync();
       render();
     }
@@ -899,7 +908,8 @@
       if (!show) return;
       if (!show.blocks) show.blocks = [];
 
-      const formattedHtml = rawText.replace(/\[([^\]]+)\]/g, '<span class="cue-tag">[$1]</span>');
+      const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 16);
+      const formattedHtml = rawText.replace(/\[([^\]]+)\]/g, '<span class="cue-tag">[$1]</span>') + `<br><span class="meta-badge">📅 ${nowStr} &bull; Manual Entry</span>`;
 
       if (editingBlockId !== null) {
         const block = show.blocks.find(b => b.id === editingBlockId);

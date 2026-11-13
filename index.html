@@ -10,38 +10,19 @@
     body { font-family: 'Inter', sans-serif; background-color: #09090b; color: #f4f4f5; }
     .mono { font-family: 'JetBrains Mono', monospace; }
     
-    /* Granular Inline Styles */
-    .hl-yellow { background: rgba(250, 204, 21, 0.35); padding: 2px 4px; border-radius: 3px; }
-    .hl-cyan { background: rgba(34, 211, 238, 0.35); padding: 2px 4px; border-radius: 3px; }
-    .hl-pink { background: rgba(244, 114, 182, 0.35); padding: 2px 4px; border-radius: 3px; }
-    .strikethrough { text-decoration: line-through; opacity: 0.35; }
+    .hl-yellow { background: rgba(250, 204, 21, 0.25); border-left: 3px solid #facc15; padding-left: 10px; }
+    .hl-cyan { background: rgba(34, 211, 238, 0.25); border-left: 3px solid #22d3ee; padding-left: 10px; }
+    .hl-pink { background: rgba(244, 114, 182, 0.25); border-left: 3px solid #f472b6; padding-left: 10px; }
+    .line-crossed { text-decoration: line-through; opacity: 0.35; }
 
     .cue-tag {
       display: inline-block; background: #27272a; color: #fb923c; border: 1px solid #3f3f46;
       font-family: 'JetBrains Mono', monospace; font-size: 0.75em; font-weight: 700;
-      padding: 1px 6px; border-radius: 4px; margin-right: 4px; vertical-align: middle;
-    }
-
-    /* Floating Selection Toolbar */
-    #selectionToolbar {
-      position: absolute; display: none; z-index: 100;
-      background: #18181b; border: 1px solid #3f3f46; border-radius: 8px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7);
-      padding: 6px; align-items: center; gap: 4px;
+      padding: 1px 7px; border-radius: 5px; margin-right: 6px; vertical-align: middle;
     }
   </style>
 </head>
 <body class="min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
-
-  <!-- Floating Selection Toolbar -->
-  <div id="selectionToolbar">
-    <button onclick="applyStyle('hl-yellow')" class="w-6 h-6 rounded bg-yellow-400 hover:scale-110 transition-transform" title="Highlight Yellow"></button>
-    <button onclick="applyStyle('hl-cyan')" class="w-6 h-6 rounded bg-cyan-400 hover:scale-110 transition-transform" title="Highlight Cyan"></button>
-    <button onclick="applyStyle('hl-pink')" class="w-6 h-6 rounded bg-pink-400 hover:scale-110 transition-transform" title="Highlight Pink"></button>
-    <button onclick="applyStyle('strikethrough')" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold" title="Strikethrough">S</button>
-    <div class="h-4 w-px bg-zinc-700 mx-1"></div>
-    <button onclick="speakSelection()" class="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1">🔊 Listen (UK)</button>
-  </div>
 
   <!-- Top SaaS Control Bar -->
   <header class="sticky top-0 z-30 bg-zinc-950/95 backdrop-blur border-b border-zinc-800 px-5 py-3 flex flex-wrap items-center justify-between gap-4">
@@ -66,7 +47,7 @@
       <button onclick="toggleScratchpad()" class="px-3 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 font-medium">Scratchpad</button>
       <button onclick="window.print()" class="px-3 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 font-medium hidden sm:inline-block">Print PDF</button>
       <button onclick="openNewShowModal()" class="px-3 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 font-medium">+ New Show</button>
-      <button onclick="openImportModal()" class="px-3.5 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-sm">+ Add Block</button>
+      <button onclick="openBlockModal('add')" class="px-3.5 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-sm">+ Add Block</button>
     </div>
   </header>
 
@@ -75,16 +56,16 @@
     
     <!-- Quick Cue Palette Helper Bar -->
     <div class="bg-zinc-900/60 border border-zinc-800 p-2.5 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs">
-      <div class="text-zinc-400 font-medium">Quick Cues:</div>
+      <div class="text-zinc-400 font-medium">Quick Insert Cue:</div>
       <div class="flex flex-wrap gap-1.5">
-        <button onclick="insertCueTag('INTRO')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[INTRO]</button>
-        <button onclick="insertCueTag('SFX: Bed')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[SFX: Bed]</button>
-        <button onclick="insertCueTag('COMPETITION / CALLER')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-amber-300 rounded mono">[COMPETITION / CALLER]</button>
-        <button onclick="insertCueTag('AD BREAK')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[AD BREAK]</button>
-        <button onclick="insertCueTag('TIME CHECK')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[TIME CHECK]</button>
-        <button onclick="insertCueTag('OUTRO')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[OUTRO]</button>
+        <button onclick="insertCueToModal('[INTRO]')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[INTRO]</button>
+        <button onclick="insertCueToModal('[SFX: Bed]')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[SFX: Bed]</button>
+        <button onclick="insertCueToModal('[COMPETITION / CALLER]')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-amber-300 rounded mono">[COMPETITION / CALLER]</button>
+        <button onclick="insertCueToModal('[AD BREAK]')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[AD BREAK]</button>
+        <button onclick="insertCueToModal('[TIME CHECK]')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[TIME CHECK]</button>
+        <button onclick="insertCueToModal('[OUTRO]')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[OUTRO]</button>
       </div>
-      <div class="text-zinc-500 text-[11px] hidden md:block">Highlight any words to format or hear British TTS pronunciation</div>
+      <div class="text-zinc-500 text-[11px] hidden md:block">Click block text to cross out &bull; Click Edit to modify</div>
     </div>
 
     <!-- Script Blocks Container -->
@@ -103,20 +84,20 @@
     <div class="text-[11px] text-zinc-500 mt-2">Auto-saves to browser storage.</div>
   </div>
 
-  <!-- Add Block Modal -->
+  <!-- Add / Edit Block Modal -->
   <div id="blockModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-zinc-900 border border-zinc-700 rounded-xl max-w-xl w-full p-6 shadow-2xl space-y-4">
       <div class="flex justify-between items-center">
-        <h2 class="text-lg font-bold text-white">Add Script Block</h2>
+        <h2 id="modalHeaderTitle" class="text-lg font-bold text-white">Add Script Block</h2>
         <button onclick="closeBlockModal()" class="text-zinc-400 hover:text-white text-xl">&times;</button>
       </div>
       <div>
-        <label class="block text-xs text-zinc-400 mb-1">Block Text (WYSIWYG & Cues Supported)</label>
+        <label class="block text-xs text-zinc-400 mb-1">Block Text (Use [TAGS] for cues)</label>
         <textarea id="blockTextInput" rows="6" placeholder="[INTRO] Welcome back to the show..." class="w-full bg-zinc-950 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-100 font-mono focus:outline-none focus:border-indigo-500"></textarea>
       </div>
       <div class="flex justify-end gap-2 pt-2">
         <button onclick="closeBlockModal()" class="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm text-zinc-300">Cancel</button>
-        <button onclick="saveBlockForm()" class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white">Save Block</button>
+        <button onclick="saveBlockModalData()" class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white">Save Block</button>
       </div>
     </div>
   </div>
@@ -155,8 +136,8 @@
           title: "Morning Drive & News",
           targetHours: 1,
           blocks: [
-            { id: 1, html: '<span class="cue-tag">[INTRO BED]</span> Good morning Stanley!', editing: false },
-            { id: 2, html: '<span class="cue-tag">[COMPETITION]</span> Line 3 is John for the morning mystery voice giveaway.', editing: false }
+            { id: 1, text: "[INTRO BED - 15s] Good morning Stanley!", hl: "hl-yellow", crossed: false },
+            { id: 2, text: "[COMPETITION / CALLER] Line 3 is John for the morning mystery voice giveaway.", hl: "hl-cyan", crossed: false }
           ]
         },
         {
@@ -164,80 +145,21 @@
           title: "Hits of the 80s & 90s",
           targetHours: 2,
           blocks: [
-            { id: 101, html: '<span class="cue-tag">[INTRO]</span> Welcome back into the retro zone for the next two hours.', editing: false }
+            { id: 101, text: "[INTRO] Welcome back into the retro zone for the next two hours.", hl: "", crossed: false }
           ]
         }
       ]
     };
 
-    let activeRange = null;
+    let editingBlockId = null;
 
     setInterval(() => {
       document.getElementById("liveClock").textContent = new Date().toTimeString().split(" ")[0];
     }, 1000);
 
-    // Floating Toolbar Selection Listener
-    document.addEventListener("mouseup", (e) => {
-      const toolbar = document.getElementById("selectionToolbar");
-      const selection = window.getSelection();
-      
-      if (!selection.isCollapsed && selection.toString().trim().length > 0) {
-        const range = selection.getRangeAt(0);
-        const contentBlock = range.commonAncestorContainer.parentElement.closest(".script-text-area");
-        
-        if (contentBlock) {
-          activeRange = range.cloneRange();
-          const rect = range.getBoundingClientRect();
-          toolbar.style.top = `${window.scrollY + rect.top - 45}px`;
-          toolbar.style.left = `${window.scrollX + rect.left + (rect.width / 2) - 100}px`;
-          toolbar.style.display = "flex";
-          return;
-        }
-      }
-      toolbar.style.display = "none";
-    });
-
-    function applyStyle(styleClass) {
-      if (!activeRange) return;
-      const span = document.createElement("span");
-      span.className = styleClass;
-      span.appendChild(activeRange.extractContents());
-      activeRange.insertNode(span);
-      
-      window.getSelection().removeAllRanges();
-      document.getElementById("selectionToolbar").style.display = "none";
-      saveDOMChanges();
-    }
-
-    function speakSelection() {
-      const selection = window.getSelection();
-      if (!selection.isCollapsed) {
-        const textToSpeak = selection.toString();
-        if ('speechSynthesis' in window) {
-          window.speechSynthesis.cancel(); // Stop any active speech
-          const utterance = new SpeechSynthesisUtterance(textToSpeak);
-          utterance.rate = 0.95; // Natural radio pacing
-          
-          // Force British English Accent
-          const voices = window.speechSynthesis.getVoices();
-          const ukVoice = voices.find(v => v.lang === 'en-GB' || v.name.includes('UK') || v.name.includes('British'));
-          if (ukVoice) utterance.voice = ukVoice;
-          
-          window.speechSynthesis.speak(utterance);
-        }
-      }
-      document.getElementById("selectionToolbar").style.display = "none";
-    }
-
-    function saveDOMChanges() {
-      const show = appState.shows.find(s => s.id === appState.activeShowId);
-      document.querySelectorAll(".script-text-area").forEach(el => {
-        const id = parseInt(el.dataset.id);
-        const block = show.blocks.find(b => b.id === id);
-        if (block) block.html = el.innerHTML;
-      });
-      saveAndSync();
-      render();
+    // Parse [TAGS] into styled HTML badges automatically
+    function formatBlockText(text) {
+      return text.replace(/\[([^\]]+)\]/g, '<span class="cue-tag">[$1]</span>');
     }
 
     function render() {
@@ -260,45 +182,33 @@
       let totalWords = 0;
 
       currentShow.blocks.forEach((block, idx) => {
-        const tempDiv = document.createElement("div");
-        tempDiv.innerHTML = block.html;
-        const cleanText = tempDiv.textContent || tempDiv.innerText || "";
+        const cleanText = block.text.replace(/\[[^\]]+\]/g, "").trim();
         const words = cleanText ? cleanText.split(/\s+/).length : 0;
         totalWords += words;
         const blockSecs = Math.round((words / WPM) * 60);
 
         const card = document.createElement("div");
-        card.className = `script-block group relative p-4 rounded-xl bg-zinc-900/80 border border-zinc-800 transition-all`;
+        card.className = `script-block group relative p-4 rounded-xl bg-zinc-900/80 border border-zinc-800 transition-all ${block.hl || ''} ${block.crossed ? 'line-crossed' : ''}`;
 
-        if (block.editing) {
-          card.innerHTML = `
-            <div class="space-y-3">
-              <textarea id="edit_${block.id}" rows="3" class="w-full bg-zinc-950 border border-indigo-500 rounded-lg p-2.5 text-sm text-zinc-100 font-mono focus:outline-none">${tempDiv.innerHTML}</textarea>
-              <div class="flex items-center justify-between text-xs">
-                <span class="text-zinc-500">Est. ~${blockSecs}s (${words} words)</span>
-                <div class="flex gap-2">
-                  <button onclick="cancelInlineEdit(${block.id})" class="px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded">Cancel</button>
-                  <button onclick="saveInlineEdit(${block.id})" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded">Save</button>
-                </div>
-              </div>
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1 cursor-pointer text-[19px] leading-relaxed select-none" onclick="toggleCrossed(${block.id})" title="Click to cross out/un-cross">${formatBlockText(block.text)}</div>
+            <div class="flex items-center gap-1 opacity-20 group-hover:opacity-100 transition-opacity">
+              <button title="Highlight Yellow" onclick="setBlockHighlight(${block.id}, 'hl-yellow')" class="w-5 h-5 rounded bg-yellow-400/80"></button>
+              <button title="Highlight Cyan" onclick="setBlockHighlight(${block.id}, 'hl-cyan')" class="w-5 h-5 rounded bg-cyan-400/80"></button>
+              <button title="Highlight Pink" onclick="setBlockHighlight(${block.id}, 'hl-pink')" class="w-5 h-5 rounded bg-pink-400/80"></button>
+              <button title="Clear Highlight" onclick="setBlockHighlight(${block.id}, '')" class="px-1.5 h-5 rounded bg-zinc-800 text-[10px] text-zinc-400">✕</button>
+              <button title="Edit Block" onclick="openBlockModal('edit', ${block.id})" class="px-2 py-1 bg-zinc-800 text-indigo-400 rounded text-xs font-semibold">Edit</button>
+              <button title="Move Up" onclick="moveBlock(${block.id}, -1)" class="px-1.5 py-1 bg-zinc-800 text-zinc-300 rounded text-xs">▲</button>
+              <button title="Move Down" onclick="moveBlock(${block.id}, 1)" class="px-1.5 py-1 bg-zinc-800 text-zinc-300 rounded text-xs">▼</button>
+              <button title="Delete" onclick="deleteBlock(${block.id})" class="px-1.5 py-1 bg-red-950/60 text-red-400 rounded text-xs ml-1">🗑</button>
             </div>
-          `;
-        } else {
-          card.innerHTML = `
-            <div class="flex items-start justify-between gap-4">
-              <div class="script-text-area flex-1 text-[19px] leading-relaxed outline-none" data-id="${block.id}" contenteditable="true" onblur="saveDOMChanges()">${block.html}</div>
-              <div class="flex items-center gap-1 opacity-20 group-hover:opacity-100 transition-opacity">
-                <button title="Move Up" onclick="moveBlock(${block.id}, -1)" class="px-1.5 py-1 bg-zinc-800 text-zinc-300 rounded text-xs">▲</button>
-                <button title="Move Down" onclick="moveBlock(${block.id}, 1)" class="px-1.5 py-1 bg-zinc-800 text-zinc-300 rounded text-xs">▼</button>
-                <button title="Delete" onclick="deleteBlock(${block.id})" class="px-1.5 py-1 bg-red-950/60 text-red-400 rounded text-xs ml-1">🗑</button>
-              </div>
-            </div>
-            <div class="mt-2.5 pt-2 border-t border-zinc-800/60 flex items-center justify-between text-[11px] mono text-zinc-500">
-              <span>BLOCK #${idx + 1} &bull; EST. <strong class="text-zinc-400">${blockSecs}s</strong> (${words} words)</span>
-              <span class="text-indigo-400 hover:underline cursor-pointer" onclick="startInlineEdit(${block.id})">Edit Source HTML</span>
-            </div>
-          `;
-        }
+          </div>
+          <div class="mt-2.5 pt-2 border-t border-zinc-800/60 flex items-center justify-between text-[11px] mono text-zinc-500">
+            <span>BLOCK #${idx + 1} &bull; EST. <strong class="text-zinc-400">${blockSecs}s</strong> (${words} words)</span>
+            <span class="text-zinc-400">Click text to toggle reading strike</span>
+          </div>
+        `;
         container.appendChild(card);
       });
 
@@ -329,32 +239,27 @@
       return `${m}:${s < 10 ? "0" : ""}${s}`;
     }
 
+    function toggleCrossed(id) {
+      const show = appState.shows.find(s => s.id === appState.activeShowId);
+      const b = show.blocks.find(x => x.id === id);
+      if (b) {
+        b.crossed = !b.crossed;
+        saveAndSync();
+        render();
+      }
+    }
+
     function switchShow(showId) {
       appState.activeShowId = showId;
       saveAndSync();
       render();
     }
 
-    function startInlineEdit(id) {
-      const show = appState.shows.find(s => s.id === appState.activeShowId);
-      show.blocks.forEach(b => b.editing = (b.id === id));
-      render();
-    }
-
-    function cancelInlineEdit(id) {
+    function setBlockHighlight(id, hlClass) {
       const show = appState.shows.find(s => s.id === appState.activeShowId);
       const b = show.blocks.find(x => x.id === id);
-      if (b) b.editing = false;
-      render();
-    }
-
-    function saveInlineEdit(id) {
-      const show = appState.shows.find(s => s.id === appState.activeShowId);
-      const b = show.blocks.find(x => x.id === id);
-      const val = document.getElementById(`edit_${id}`).value.trim();
-      if (b && val) {
-        b.html = val;
-        b.editing = false;
+      if (b) {
+        b.hl = b.hl === hlClass ? "" : hlClass;
         saveAndSync();
         render();
       }
@@ -378,21 +283,49 @@
       render();
     }
 
-    function insertCueTag(tag) {
-      const show = appState.shows.find(s => s.id === appState.activeShowId);
-      show.blocks.push({ id: Date.now(), html: `<span class="cue-tag">[${tag}]</span> New script text here...`, editing: false });
-      saveAndSync();
-      render();
+    // Modal Management
+    function openBlockModal(mode, id = null) {
+      editingBlockId = id;
+      const modalTitle = document.getElementById("modalHeaderTitle");
+      const textInput = document.getElementById("blockTextInput");
+
+      if (mode === 'edit' && id !== null) {
+        modalTitle.textContent = "Edit Script Block";
+        const show = appState.shows.find(s => s.id === appState.activeShowId);
+        const block = show.blocks.find(b => b.id === id);
+        textInput.value = block ? block.text : "";
+      } else {
+        modalTitle.textContent = "Add Script Block";
+        textInput.value = "";
+      }
+      document.getElementById("blockModal").classList.remove("hidden");
     }
 
-    function openImportModal() { document.getElementById("blockModal").classList.remove("hidden"); }
-    function closeBlockModal() { document.getElementById("blockModal").classList.add("hidden"); }
-    function saveBlockForm() {
+    function closeBlockModal() {
+      document.getElementById("blockModal").classList.add("hidden");
+      editingBlockId = null;
+    }
+
+    function insertCueToModal(tag) {
+      const textarea = document.getElementById("blockTextInput");
+      const val = textarea.value;
+      const selStart = textarea.selectionStart;
+      textarea.value = val.substring(0, selStart) + " " + tag + " " + val.substring(textarea.selectionEnd);
+      textarea.focus();
+    }
+
+    function saveBlockModalData() {
       const text = document.getElementById("blockTextInput").value.trim();
       if (!text) return;
       const show = appState.shows.find(s => s.id === appState.activeShowId);
-      show.blocks.push({ id: Date.now(), html: text, editing: false });
-      document.getElementById("blockTextInput").value = "";
+
+      if (editingBlockId !== null) {
+        const block = show.blocks.find(b => b.id === editingBlockId);
+        if (block) block.text = text;
+      } else {
+        show.blocks.push({ id: Date.now(), text, hl: "", crossed: false });
+      }
+
       closeBlockModal();
       saveAndSync();
       render();
@@ -405,7 +338,7 @@
       const hours = parseFloat(document.getElementById("newShowHours").value) || 1;
       if (!name) return;
       const newId = "show_" + Date.now();
-      appState.shows.push({ id: newId, title: name, targetHours: hours, blocks: [{ id: Date.now(), html: `<span class="cue-tag">[INTRO]</span> Welcome to ${name}`, editing: false }] });
+      appState.shows.push({ id: newId, title: name, targetHours: hours, blocks: [{ id: Date.now(), text: "[INTRO] Welcome to " + name, hl: "", crossed: false }] });
       appState.activeShowId = newId;
       closeNewShowModal();
       saveAndSync();
@@ -426,11 +359,12 @@
       localStorage.setItem("onair_app_state", JSON.stringify(appState));
       if (FIREBASE_ENDPOINT) {
         try {
-          await fetch(FIREBASE_ENDPOINT, {
+          const res = await fetch(FIREBASE_ENDPOINT, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(appState)
           });
+          if (!res.ok) throw new Error("HTTP " + res.status);
           document.getElementById("syncBadge").textContent = "CLOUD SYNCED";
           document.getElementById("syncBadge").className = "text-[11px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 mono";
         } catch (err) {

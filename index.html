@@ -130,22 +130,22 @@
     </div>
 
     <!-- Pro Tools & Actions -->
-    <div class="flex items-center gap-1.5 sm:gap-2">
-      <!-- Font Size Stepper -->
-      <div class="hidden md:flex items-center bg-zinc-900 border border-zinc-700 rounded-lg p-0.5 text-xs">
+    <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+      <!-- Font Size Stepper (Visible on both mobile & desktop) -->
+      <div class="flex items-center bg-zinc-900 border border-zinc-700 rounded-lg p-0.5 text-xs">
         <button onclick="adjustFontSize(-1)" class="px-2 py-1 hover:bg-zinc-800 text-zinc-300 rounded font-bold" title="Decrease Font Size">A-</button>
-        <span id="fontSizeIndicator" class="px-2 text-zinc-400 mono text-[11px]">19px</span>
+        <span id="fontSizeIndicator" class="px-1.5 text-zinc-400 mono text-[11px]">19px</span>
         <button onclick="adjustFontSize(1)" class="px-2 py-1 hover:bg-zinc-800 text-zinc-300 rounded font-bold" title="Increase Font Size">A+</button>
       </div>
 
       <!-- Layout Mode Selector -->
       <select id="layoutModeSelector" onchange="switchLayoutMode(this.value)" class="bg-zinc-900 border border-zinc-700 text-zinc-300 text-xs px-2 py-1.5 rounded-lg focus:outline-none focus:border-indigo-500">
-        <option value="standard">Standard View</option>
-        <option value="teleprompter">Prompter Mode</option>
-        <option value="compact">Compact Grid</option>
+        <option value="standard">Standard</option>
+        <option value="teleprompter">Prompter</option>
+        <option value="compact">Compact</option>
       </select>
 
-      <button onclick="toggleCalendarModal()" class="px-2.5 py-1.5 rounded bg-indigo-950/70 hover:bg-indigo-900/80 border border-indigo-700/70 text-xs text-indigo-300 font-semibold" title="Show Calendar">📅 Calendar</button>
+      <button onclick="toggleCalendarModal()" class="px-2.5 py-1.5 rounded bg-indigo-950/70 hover:bg-indigo-900/80 border border-indigo-700/70 text-xs text-indigo-300 font-semibold" title="Show Calendar">📅</button>
       <button onclick="toggleResearchDock()" class="px-2.5 py-1.5 rounded bg-emerald-950/70 hover:bg-emerald-900/80 border border-emerald-700/70 text-xs text-emerald-300 font-semibold">🌐 Research</button>
       <button onclick="toggleScratchpad()" class="hidden sm:inline-block px-2.5 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 font-medium">Scratch</button>
       <button onclick="openBlockModal('add')" class="px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-sm">+ Block</button>
@@ -351,6 +351,42 @@
     const FIREBASE_ENDPOINT = "https://script-buddy-v1-default-rtdb.firebaseio.com/broadcast.json";
     const WPM = 145;
 
+    // =========================================================================
+    // LEGACY BLOCK MIGRATION (Recovers blocks from previous `html` format)
+    // =========================================================================
+    function htmlToCleanText(htmlStr) {
+      if (!htmlStr) return "";
+      const tmp = document.createElement("div");
+      // Convert <br> and block closing tags into newlines before extracting text
+      let normalized = htmlStr
+        .replace(/<br\s*\/?>/gi, "\n")
+        .replace(/<\/p>/gi, "\n\n")
+        .replace(/<\/div>/gi, "\n");
+      tmp.innerHTML = normalized;
+      // Strip old auto-generated meta-badges so they don't clutter raw text
+      tmp.querySelectorAll(".meta-badge").forEach(el => el.remove());
+      return (tmp.textContent || tmp.innerText || "").trim();
+    }
+
+    function migrateLegacyState(stateObj) {
+      if (!stateObj || !Array.isArray(stateObj.shows)) return false;
+      let migrated = false;
+      stateObj.shows.forEach(show => {
+        if (!Array.isArray(show.blocks)) show.blocks = [];
+        show.blocks.forEach(block => {
+          if (block.rawText === undefined && block.html !== undefined) {
+            block.rawText = htmlToCleanText(block.html);
+            delete block.html;
+            migrated = true;
+          } else if (block.rawText === undefined) {
+            block.rawText = "";
+            migrated = true;
+          }
+        });
+      });
+      return migrated;
+    }
+
     auth.onAuthStateChanged((user) => {
       const loginOverlay = document.getElementById("loginOverlay");
       if (user) {
@@ -446,13 +482,13 @@
       });
     }
 
-    // Markdown Parser (Bold, Italics, Underline, Headers, Tables, Images, Cues)
+    // Markdown Parser (Bold, Italics, Underline, Headers, Lists, Tables, Images, Cues)
     function parseMarkdownToHtml(rawText) {
       if (!rawText) return "";
       let text = escapeHtml(rawText);
 
       // Cues [TAG]
-      text = text.replace(/\[([A-Z0-9_\s:-]+)\]/g, '<span class="cue-tag">[$1]</span>');
+      text = text.replace(/\[([^\]]+)\]/g, '<span class="cue-tag">[$1]</span>');
 
       // Markdown Images ![alt](url)
       text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />');
@@ -465,7 +501,7 @@
       text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
       text = text.replace(/_(.*?)_/g, '<em>$1</em>');
 
-      // Underline <u>text</u> (re-allow safe HTML tags)
+      // Underline <u>text</u> and <code>text</code>
       text = text.replace(/&lt;u&gt;(.*?)&lt;\/u&gt;/g, '<u>$1</u>');
       text = text.replace(/&lt;code&gt;(.*?)&lt;\/code&gt;/g, '<code class="mono bg-zinc-800 px-1 py-0.5 rounded text-xs">$1</code>');
 
@@ -473,6 +509,9 @@
       text = text.replace(/^### (.*$)/gm, '<h3 class="text-base font-bold text-indigo-400 my-2">$1</h3>');
       text = text.replace(/^## (.*$)/gm, '<h2 class="text-lg font-bold text-zinc-100 my-2">$1</h2>');
       text = text.replace(/^# (.*$)/gm, '<h1 class="text-xl font-bold text-zinc-100 my-3">$1</h1>');
+
+      // Bullet points
+      text = text.replace(/^\s*[-*]\s+(.*)$/gm, '&bull; $1');
 
       // Tables parsing
       const lines = text.split('\n');
@@ -488,9 +527,8 @@
             tableHtml = '<div class="overflow-x-auto"><table>';
           }
           const cells = line.split('|').slice(1, -1).map(c => c.trim());
-          // Check if separator line
           if (cells.every(c => c.match(/^[:\-\s]+$/))) {
-            continue; // Skip markdown separator row
+            continue;
           }
           const isHeader = !tableHtml.includes('<th>');
           const tag = isHeader ? 'th' : 'td';
@@ -566,7 +604,6 @@
 
     function applyInlineStyle(styleClass) {
       if (!activeRange) return;
-      // For rich editing, we rely on modal editing for full markdown, but toolbar supports highlighting
       const span = document.createElement("span");
       span.className = styleClass;
       try {
@@ -661,7 +698,8 @@
         `;
       } else {
         currentShow.blocks.forEach((block, idx) => {
-          const raw = block.rawText || "";
+          // Safe fallback if a legacy block ever slips through
+          const raw = block.rawText !== undefined ? block.rawText : htmlToCleanText(block.html || "");
           const cleanText = stripHtmlEntities(raw.replace(/\[[^\]]+\]/g, ''));
           const words = cleanText ? cleanText.split(/\s+/).length : 0;
           if (!block.blackout) totalWords += words;
@@ -794,7 +832,11 @@
     function duplicateShow(showId) {
       const source = appState.shows.find(s => s.id === showId);
       if (!source) return;
-      const clonedBlocks = (source.blocks || []).map((b, i) => ({ id: Date.now() + i, rawText: b.rawText, blackout: false }));
+      const clonedBlocks = (source.blocks || []).map((b, i) => ({
+        id: Date.now() + i,
+        rawText: b.rawText !== undefined ? b.rawText : htmlToCleanText(b.html || ""),
+        blackout: false
+      }));
       const newId = "show_" + (Date.now() + 99);
       appState.shows.push({ id: newId, title: `${source.title} (Copy)`, targetHours: source.targetHours, blocks: clonedBlocks });
       appState.activeShowId = newId;
@@ -1013,7 +1055,11 @@
       if (mode === 'edit' && id !== null) {
         const show = appState.shows.find(s => s.id === appState.activeShowId);
         const block = show ? show.blocks.find(b => b.id === id) : null;
-        textInput.value = block ? block.rawText : "";
+        if (block) {
+          textInput.value = block.rawText !== undefined ? block.rawText : htmlToCleanText(block.html || "");
+        } else {
+          textInput.value = "";
+        }
       } else {
         textInput.value = "";
       }
@@ -1052,7 +1098,10 @@
 
       if (editingBlockId !== null) {
         const block = show.blocks.find(b => b.id === editingBlockId);
-        if (block) block.rawText = rawText;
+        if (block) {
+          block.rawText = rawText;
+          delete block.html;
+        }
       } else {
         show.blocks.push({ id: Date.now(), rawText, blackout: false });
       }
@@ -1092,19 +1141,28 @@
     }
 
     async function initLoad() {
+      let loadedData = null;
       if (FIREBASE_ENDPOINT) {
         try {
           const res = await fetch(FIREBASE_ENDPOINT);
           const data = await res.json();
           if (data && data.shows && data.shows.length > 0) {
-            appState = data;
-            render();
-            return;
+            loadedData = data;
           }
         } catch (e) {}
       }
-      const saved = localStorage.getItem("onair_app_state");
-      if (saved) appState = JSON.parse(saved);
+      if (!loadedData) {
+        const saved = localStorage.getItem("onair_app_state");
+        if (saved) loadedData = JSON.parse(saved);
+      }
+
+      if (loadedData) {
+        const didMigrate = migrateLegacyState(loadedData);
+        appState = loadedData;
+        if (didMigrate) {
+          saveAndSync();
+        }
+      }
       render();
     }
   </script>

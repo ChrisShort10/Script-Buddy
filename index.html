@@ -270,7 +270,7 @@
         </div>
         <div class="w-28">
           <label class="block text-[11px] text-zinc-400 mb-1">Initial Hours</label>
-          <input id="mgrNewShowHours" type="number" min="1" max="5" value="3" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
+          <input id="mgrNewShowHours" type="number" min="1" max="5" value="1" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
         </div>
         <button onclick="createShowFromManager()" class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white shrink-0">+ Create</button>
       </div>
@@ -289,6 +289,27 @@
       <div class="flex justify-between items-center border-b border-zinc-800 pb-2">
         <h2 id="modalHeaderTitle" class="text-lg font-bold text-white">Add Script Block</h2>
         <button onclick="closeBlockModal()" class="text-zinc-400 hover:text-white text-xl">&times;</button>
+      </div>
+
+      <!-- Manual Duration Override Controls -->
+      <div class="bg-zinc-950 p-3 rounded-lg border border-zinc-800 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-zinc-300">
+            <input type="checkbox" id="enableManualDuration" onchange="toggleManualDurationInput(this.checked)" class="rounded bg-zinc-900 border-zinc-700 text-indigo-600 focus:ring-indigo-500 h-4 w-4" />
+            <span>⏱ Set Custom Read Length (Override WPM)</span>
+          </label>
+          <span class="text-[10px] text-zinc-500">Ideal for weather PDFs or fixed audio assets</span>
+        </div>
+        <div id="manualDurationGroup" class="hidden grid grid-cols-2 gap-3 pt-1">
+          <div>
+            <label class="block text-[10px] text-zinc-400 mb-1">Minutes</label>
+            <input id="manualDurationMins" type="number" min="0" value="3" class="w-full bg-zinc-900 border border-zinc-700 rounded px-2.5 py-1 text-sm text-white mono" />
+          </div>
+          <div>
+            <label class="block text-[10px] text-zinc-400 mb-1">Seconds</label>
+            <input id="manualDurationSecs" type="number" min="0" max="59" value="0" class="w-full bg-zinc-900 border border-zinc-700 rounded px-2.5 py-1 text-sm text-white mono" />
+          </div>
+        </div>
       </div>
 
       <div class="flex flex-wrap items-center gap-1.5 bg-zinc-950 p-2 rounded-lg border border-zinc-800 text-xs">
@@ -310,7 +331,7 @@
       </div>
 
       <div>
-        <textarea id="blockTextInput" rows="9" placeholder="Type or paste your script content here..." class="w-full bg-zinc-950 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-100 font-mono focus:outline-none focus:border-indigo-500"></textarea>
+        <textarea id="blockTextInput" rows="7" placeholder="Type or paste your script content here..." class="w-full bg-zinc-950 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-100 font-mono focus:outline-none focus:border-indigo-500"></textarea>
       </div>
 
       <div class="flex justify-end gap-2 pt-2 border-t border-zinc-800">
@@ -338,11 +359,9 @@
             {
               title: "Hour 1",
               blocks: [
-                { id: 1, rawText: "[INTRO BED] Good morning Stanley and outer islands!\n\n| Time | Segment / Track |\n|---|---|\n| 08:05 | Local News & Weather |\n| 08:15 | 80s Retro Anthem |", blackout: false }
+                { id: 1, rawText: "[INTRO BED] Good morning Stanley and outer islands!\n\n| Time | Segment / Track |\n|---|---|\n| 08:05 | Local News & Weather |\n| 08:15 | 80s Retro Anthem |", blackout: false, manualSecs: null }
               ]
-            },
-            { title: "Hour 2", blocks: [] },
-            { title: "Hour 3", blocks: [] }
+            }
           ]
         }
       ]
@@ -373,13 +392,10 @@
       if (!stateObj || !Array.isArray(stateObj.shows)) return false;
       let migrated = false;
       stateObj.shows.forEach(show => {
-        // If show uses legacy flat blocks array instead of multi-hour structure
         if (!Array.isArray(show.hours)) {
           let existingBlocks = Array.isArray(show.blocks) ? show.blocks : [];
           show.hours = [
-            { title: "Hour 1", blocks: existingBlocks },
-            { title: "Hour 2", blocks: [] },
-            { title: "Hour 3", blocks: [] }
+            { title: "Hour 1", blocks: existingBlocks }
           ];
           delete show.blocks;
           delete show.targetHours;
@@ -395,6 +411,9 @@
             } else if (block.rawText === undefined) {
               block.rawText = "";
               migrated = true;
+            }
+            if (block.manualSecs === undefined) {
+              block.manualSecs = null;
             }
           });
         });
@@ -484,6 +503,35 @@
       const nextNum = show.hours.length + 1;
       show.hours.push({ title: `Hour ${nextNum}`, blocks: [] });
       appState.activeHourIndex = show.hours.length - 1;
+      saveAndSync();
+      render();
+    }
+
+    function removeHourSubgroup(hourIdx, event) {
+      event.stopPropagation();
+      const show = appState.shows.find(s => s.id === appState.activeShowId);
+      if (!show || !show.hours) return;
+      if (show.hours.length <= 1) {
+        alert("Shows must retain at least one hour block.");
+        return;
+      }
+      
+      const targetHour = show.hours[hourIdx];
+      const blockCount = targetHour.blocks ? targetHour.blocks.length : 0;
+      if (blockCount > 0) {
+        if (!confirm(`Are you sure you want to delete "${targetHour.title}"? It contains ${blockCount} script block(s).`)) {
+          return;
+        }
+      }
+
+      show.hours.splice(hourIdx, 1);
+      show.hours.forEach((hr, idx) => {
+        hr.title = `Hour ${idx + 1}`;
+      });
+
+      if (appState.activeHourIndex >= show.hours.length) {
+        appState.activeHourIndex = show.hours.length - 1;
+      }
       saveAndSync();
       render();
     }
@@ -746,25 +794,33 @@
       tabsContainer.innerHTML = "";
       currentShow.hours.forEach((hr, idx) => {
         const isSelected = idx === appState.activeHourIndex;
-        // Calculate words for this hour subgroup
-        let hrWords = 0;
+        let hrSecs = 0;
         (hr.blocks || []).forEach(b => {
           if (!b.blackout) {
-            const raw = b.rawText !== undefined ? b.rawText : htmlToCleanText(b.html || "");
-            const clean = stripHtmlEntities(raw.replace(/\[[^\]]+\]/g, ''));
-            hrWords += clean ? clean.split(/\s+/).length : 0;
+            if (b.manualSecs !== null && b.manualSecs !== undefined) {
+              hrSecs += b.manualSecs;
+            } else {
+              const raw = b.rawText !== undefined ? b.rawText : htmlToCleanText(b.html || "");
+              const clean = stripHtmlEntities(raw.replace(/\[[^\]]+\]/g, ''));
+              const words = clean ? clean.split(/\s+/).length : 0;
+              hrSecs += Math.round((words / WPM) * 60);
+            }
           }
         });
-        const hrSecs = Math.round((hrWords / WPM) * 60);
 
-        const tabBtn = document.createElement("button");
-        tabBtn.onclick = () => switchHour(idx);
-        tabBtn.className = `px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0 flex items-center gap-2 border transition-all ${
+        const tabBtn = document.createElement("div");
+        tabBtn.className = `px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0 flex items-center gap-2 border transition-all cursor-pointer ${
           isSelected 
             ? 'bg-indigo-600 border-indigo-500 text-white shadow-md' 
             : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-zinc-200'
         }`;
-        tabBtn.innerHTML = `<span>${escapeHtml(hr.title)}</span> <span class="text-[10px] opacity-80 mono">(${formatTime(hrSecs)})</span>`;
+        tabBtn.onclick = () => switchHour(idx);
+        
+        let htmlContent = `<span>${escapeHtml(hr.title)}</span> <span class="text-[10px] opacity-80 mono">(${formatTime(hrSecs)})</span>`;
+        if (currentShow.hours.length > 1) {
+          htmlContent += `<button onclick="removeHourSubgroup(${idx}, event)" class="ml-1 px-1 py-0.5 rounded hover:bg-black/30 text-red-300 hover:text-red-100 text-[11px]" title="Delete Hour">✕</button>`;
+        }
+        tabBtn.innerHTML = htmlContent;
         tabsContainer.appendChild(tabBtn);
       });
 
@@ -772,7 +828,23 @@
       container.className = layoutMode === "compact" ? "space-y-2" : "space-y-4";
       container.innerHTML = "";
 
-      let totalWords = 0;
+      let totalSecsAllHours = 0;
+
+      // Calculate total show time across all hours
+      currentShow.hours.forEach(hr => {
+        (hr.blocks || []).forEach(b => {
+          if (!b.blackout) {
+            if (b.manualSecs !== null && b.manualSecs !== undefined) {
+              totalSecsAllHours += b.manualSecs;
+            } else {
+              const raw = b.rawText !== undefined ? b.rawText : htmlToCleanText(b.html || "");
+              const clean = stripHtmlEntities(raw.replace(/\[[^\]]+\]/g, ''));
+              const words = clean ? clean.split(/\s+/).length : 0;
+              totalSecsAllHours += Math.round((words / WPM) * 60);
+            }
+          }
+        });
+      });
 
       if (!currentHour.blocks || currentHour.blocks.length === 0) {
         container.innerHTML = `
@@ -785,8 +857,15 @@
           const raw = block.rawText !== undefined ? block.rawText : htmlToCleanText(block.html || "");
           const cleanText = stripHtmlEntities(raw.replace(/\[[^\]]+\]/g, ''));
           const words = cleanText ? cleanText.split(/\s+/).length : 0;
-          if (!block.blackout) totalWords += words;
-          const blockSecs = Math.round((words / WPM) * 60);
+          
+          let blockSecs = 0;
+          let isManual = false;
+          if (block.manualSecs !== null && block.manualSecs !== undefined) {
+            blockSecs = block.manualSecs;
+            isManual = true;
+          } else {
+            blockSecs = Math.round((words / WPM) * 60);
+          }
 
           const card = document.createElement("div");
           const padClass = layoutMode === "compact" ? "p-3" : (layoutMode === "teleprompter" ? "p-6 sm:p-8 bg-zinc-950 border-indigo-500/40" : "p-4");
@@ -807,7 +886,7 @@
             </div>
             ${layoutMode !== 'compact' ? `
               <div class="mt-2.5 pt-2 border-t border-zinc-800/60 flex items-center justify-between text-[11px] mono text-zinc-500">
-                <span>BLOCK #${idx + 1} &bull; EST. <strong class="text-zinc-400">${formatTime(blockSecs)}</strong> (${words}w)</span>
+                <span>BLOCK #${idx + 1} &bull; EST. <strong class="text-zinc-400">${formatTime(blockSecs)}</strong> ${isManual ? '<span class="text-indigo-400 font-semibold">⏱ Custom</span>' : `(${words}w)`}</span>
                 <span class="text-zinc-400">${escapeHtml(currentHour.title)}</span>
               </div>
             ` : ''}
@@ -816,22 +895,10 @@
         });
       }
 
-      // Calculate total words across ALL hours in show for overall stats
-      let showTotalWords = 0;
-      currentShow.hours.forEach(hr => {
-        (hr.blocks || []).forEach(b => {
-          if (!b.blackout) {
-            const raw = b.rawText !== undefined ? b.rawText : htmlToCleanText(b.html || "");
-            const clean = stripHtmlEntities(raw.replace(/\[[^\]]+\]/g, ''));
-            showTotalWords += clean ? clean.split(/\s+/).length : 0;
-          }
-        });
-      });
-      const totalSecs = Math.round((showTotalWords / WPM) * 60);
-      document.getElementById("timeTotal").textContent = formatTime(totalSecs);
+      document.getElementById("timeTotal").textContent = formatTime(totalSecsAllHours);
 
       const targetSecs = currentShow.hours.length * 3600;
-      const diffSecs = totalSecs - targetSecs;
+      const diffSecs = totalSecsAllHours - targetSecs;
       const deltaEl = document.getElementById("timeDelta");
       
       if (Math.abs(diffSecs) < 120) {
@@ -846,7 +913,6 @@
       }
     }
 
-    // Format time representation: displays hours if >= 3600s, otherwise minutes & seconds
     function formatTime(sec) {
       if (isNaN(sec) || sec < 0) sec = 0;
       const h = Math.floor(sec / 3600);
@@ -901,7 +967,7 @@
       const nameInput = document.getElementById("mgrNewShowName");
       const hoursInput = document.getElementById("mgrNewShowHours");
       const name = nameInput.value.trim();
-      const numHours = Math.max(1, parseInt(hoursInput.value) || 3);
+      const numHours = Math.max(1, parseInt(hoursInput.value) || 1);
       if (!name) return;
 
       const newId = "show_" + Date.now();
@@ -909,7 +975,7 @@
       for (let i = 1; i <= numHours; i++) {
         hoursArr.push({
           title: `Hour ${i}`,
-          blocks: i === 1 ? [{ id: Date.now(), rawText: "[INTRO] Welcome to " + name, blackout: false }] : []
+          blocks: i === 1 ? [{ id: Date.now(), rawText: "[INTRO] Welcome to " + name, blackout: false, manualSecs: null }] : []
         });
       }
 
@@ -939,7 +1005,8 @@
         blocks: (hr.blocks || []).map((b, i) => ({
           id: Date.now() + i + Math.floor(Math.random() * 100),
           rawText: b.rawText !== undefined ? b.rawText : htmlToCleanText(b.html || ""),
-          blackout: false
+          blackout: false,
+          manualSecs: b.manualSecs !== undefined ? b.manualSecs : null
         }))
       }));
       const newId = "show_" + (Date.now() + 99);
@@ -1000,7 +1067,7 @@
       if (!show || !show.hours[appState.activeHourIndex]) return;
       const hour = show.hours[appState.activeHourIndex];
       if (!hour.blocks) hour.blocks = [];
-      hour.blocks.push({ id: Date.now() + Math.floor(Math.random() * 1000), rawText, blackout: false });
+      hour.blocks.push({ id: Date.now() + Math.floor(Math.random() * 1000), rawText, blackout: false, manualSecs: null });
       saveAndSync();
       render();
     }
@@ -1159,21 +1226,52 @@
       render();
     }
 
+    function toggleManualDurationInput(checked) {
+      const group = document.getElementById("manualDurationGroup");
+      if (checked) {
+        group.classList.remove("hidden");
+      } else {
+        group.classList.add("hidden");
+      }
+    }
+
     function openBlockModal(mode, id = null) {
       editingBlockId = mode === 'edit' ? id : null;
       document.getElementById("modalHeaderTitle").textContent = mode === 'edit' ? "Edit Block" : "Add Script Block";
       const textInput = document.getElementById("blockTextInput");
+      const checkbox = document.getElementById("enableManualDuration");
+      const minsInput = document.getElementById("manualDurationMins");
+      const secsInput = document.getElementById("manualDurationSecs");
+      const manualGroup = document.getElementById("manualDurationGroup");
+
       if (mode === 'edit' && id !== null) {
         const show = appState.shows.find(s => s.id === appState.activeShowId);
         const hour = show ? show.hours[appState.activeHourIndex] : null;
         const block = hour ? hour.blocks.find(b => b.id === id) : null;
         if (block) {
           textInput.value = block.rawText !== undefined ? block.rawText : htmlToCleanText(block.html || "");
+          if (block.manualSecs !== null && block.manualSecs !== undefined) {
+            checkbox.checked = true;
+            manualGroup.classList.remove("hidden");
+            minsInput.value = Math.floor(block.manualSecs / 60);
+            secsInput.value = block.manualSecs % 60;
+          } else {
+            checkbox.checked = false;
+            manualGroup.classList.add("hidden");
+            minsInput.value = 3;
+            secsInput.value = 0;
+          }
         } else {
           textInput.value = "";
+          checkbox.checked = false;
+          manualGroup.classList.add("hidden");
         }
       } else {
         textInput.value = "";
+        checkbox.checked = false;
+        manualGroup.classList.add("hidden");
+        minsInput.value = 3;
+        secsInput.value = 0;
       }
       document.getElementById("blockModal").classList.remove("hidden");
     }
@@ -1207,14 +1305,23 @@
       const hour = show.hours[appState.activeHourIndex];
       if (!hour.blocks) hour.blocks = [];
 
+      const isManual = document.getElementById("enableManualDuration").checked;
+      let manualSecs = null;
+      if (isManual) {
+        const m = parseInt(document.getElementById("manualDurationMins").value) || 0;
+        const s = parseInt(document.getElementById("manualDurationSecs").value) || 0;
+        manualSecs = (m * 60) + s;
+      }
+
       if (editingBlockId !== null) {
         const block = hour.blocks.find(b => b.id === editingBlockId);
         if (block) {
           block.rawText = rawText;
+          block.manualSecs = manualSecs;
           delete block.html;
         }
       } else {
-        hour.blocks.push({ id: Date.now(), rawText, blackout: false });
+        hour.blocks.push({ id: Date.now(), rawText, blackout: false, manualSecs });
       }
       closeBlockModal();
       saveAndSync();

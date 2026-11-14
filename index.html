@@ -65,6 +65,14 @@
       box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.85);
       padding: 6px; align-items: center; gap: 5px;
     }
+
+    @keyframes nagFlash {
+      0%, 100% { border-color: #ef4444; background-color: rgba(239, 68, 68, 0.2); }
+      50% { border-color: #7f1d1d; background-color: rgba(127, 29, 29, 0.1); }
+    }
+    .chronometer-nag {
+      animation: nagFlash 0.8s infinite ease-in-out;
+    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
@@ -151,6 +159,7 @@
 
       <button onclick="toggleCalendarModal()" class="px-2.5 py-1.5 rounded bg-indigo-950/70 hover:bg-indigo-900/80 border border-indigo-700/70 text-xs text-indigo-300 font-semibold" title="Show Calendar">📅</button>
       <button onclick="toggleResearchDock()" class="px-2.5 py-1.5 rounded bg-emerald-950/70 hover:bg-emerald-900/80 border border-emerald-700/70 text-xs text-emerald-300 font-semibold">🌐 Research</button>
+      <button onclick="toggleLabsModal()" id="labsNavBtn" class="px-2.5 py-1.5 rounded bg-amber-950/70 hover:bg-amber-900/80 border border-amber-700/70 text-[11px] text-amber-300 font-semibold" title="Experimental Testing Menu">🧪 Labs</button>
       <button onclick="openBlockModal('add')" class="px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-sm">+ Block</button>
       <button onclick="handleLogout()" class="px-2 py-1.5 rounded bg-zinc-900 hover:bg-red-950 border border-zinc-700 hover:border-red-800 text-xs text-zinc-400 hover:text-red-300" title="Sign Out">✕</button>
     </div>
@@ -158,6 +167,45 @@
 
   <!-- Main Content Workspace -->
   <main id="mainWorkspace" class="flex-1 max-w-4xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
+    
+    <!-- Studio Voice Link Chronometer Widget -->
+    <div id="chronoCard" class="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3.5 sm:p-4 flex flex-wrap items-center justify-between gap-4 shadow-xl transition-all">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold shrink-0 text-lg">⏱</div>
+        <div>
+          <div class="text-xs font-bold text-zinc-200 flex items-center gap-2">
+            <span>Voice Link Chronometer</span>
+            <span id="chronoStatusBadge" class="text-[10px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 mono">STANDBY</span>
+          </div>
+          <div id="chronoSubText" class="text-[11px] text-zinc-400">Target limit warning configured live</div>
+        </div>
+      </div>
+
+      <!-- Chrono Display & Controls -->
+      <div class="flex items-center gap-3 flex-wrap">
+        <div class="flex items-center gap-2 bg-zinc-950 px-3 py-1.5 rounded-lg border border-zinc-800 text-xs">
+          <span class="text-zinc-500">Max Limit:</span>
+          <select id="chronoLimitSelect" class="bg-transparent text-indigo-400 font-bold focus:outline-none mono">
+            <option value="30">30s</option>
+            <option value="45">45s</option>
+            <option value="60" selected>1m 00s</option>
+            <option value="90">1m 30s</option>
+            <option value="120">2m 00s</option>
+            <option value="180">3m 00s</option>
+          </select>
+        </div>
+
+        <div id="chronoDisplay" class="text-2xl sm:text-3xl font-bold mono text-zinc-100 bg-zinc-950 px-4 py-1 rounded-xl border border-zinc-800 min-w-[110px] text-center">
+          0:00
+        </div>
+
+        <div class="flex items-center gap-1.5">
+          <button onclick="startChronometerSequence()" id="chronoStartBtn" class="px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold shadow-md flex items-center gap-1">🎙️ Go Live</button>
+          <button onclick="stopChronometer()" class="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold">Stop</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Hour Subgroups Selector Bar -->
     <div class="bg-zinc-900/80 border border-zinc-800 p-2.5 rounded-xl flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-1.5 overflow-x-auto py-1" id="hourTabsContainer">
@@ -168,6 +216,88 @@
 
     <div id="blocksContainer" class="space-y-4"></div>
   </main>
+
+  <!-- Labs Testing Menu Modal -->
+  <div id="labsModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-zinc-900 border border-zinc-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b border-zinc-800 pb-3">
+        <div>
+          <h2 class="text-base font-bold text-white flex items-center gap-2">🧪 Studio Labs (Beta Testing & Safe Mode)</h2>
+          <p class="text-xs text-zinc-400">Experimental features with instant master killswitches</p>
+        </div>
+        <button onclick="toggleLabsModal()" class="text-zinc-400 hover:text-white text-xl">&times;</button>
+      </div>
+
+      <!-- MASTER KILLSWITCH BANNER -->
+      <div class="bg-red-950/40 border border-red-800/70 p-4 rounded-xl space-y-3">
+        <div class="flex items-start justify-between gap-3">
+          <div class="space-y-1">
+            <div class="text-xs font-bold text-red-200 flex items-center gap-1.5">
+              <span>🚨 MASTER SAFE-MODE KILLSWITCH</span>
+            </div>
+            <p class="text-[11px] text-red-300/80">Instantly disables all background labs plugins, terminates microphone streams, and reverts to stable baseline studio mode.</p>
+          </div>
+          <button onclick="triggerMasterKillswitch()" class="px-3.5 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-lg shadow-red-600/30 shrink-0 transition-all">KILL ALL LABS</button>
+        </div>
+      </div>
+
+      <!-- LAB ITEM 1: MIC VAD -->
+      <div class="bg-zinc-950 border border-zinc-800 p-4 rounded-xl space-y-4">
+        <div class="flex items-start justify-between gap-3">
+          <div class="space-y-1">
+            <div class="text-xs font-bold text-zinc-200">Microphone VAD Auto-Trigger (Mobile Beta)</div>
+            <p class="text-[11px] text-zinc-400">Listens via your mobile mic to automatically start the chronometer when speech volume spikes above room noise.</p>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+            <input type="checkbox" id="labsMicVadToggle" onchange="toggleMicVad(this.checked)" class="sr-only peer">
+            <div class="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
+          </label>
+        </div>
+
+        <div id="micStatusBox" class="hidden space-y-2 pt-2 border-t border-zinc-800 text-xs">
+          <div class="flex justify-between text-zinc-400">
+            <span>Mic Signal Level:</span>
+            <span id="micDbMeter" class="mono text-amber-400 font-bold">0 dB</span>
+          </div>
+          <div class="w-full bg-zinc-900 rounded-full h-2 overflow-hidden border border-zinc-800">
+            <div id="micMeterBar" class="bg-amber-500 h-full w-0 transition-all duration-75"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LAB ITEM 2: AUTO-SCROLL TELEPROMPTER PACE -->
+      <div class="bg-zinc-950 border border-zinc-800 p-4 rounded-xl space-y-3">
+        <div class="flex items-start justify-between gap-3">
+          <div class="space-y-1">
+            <div class="text-xs font-bold text-zinc-200">Auto-Scroll Teleprompter Pace (Beta)</div>
+            <p class="text-[11px] text-zinc-400">Smoothly autoscrolls the active block based on standard 145 WPM speaking cadence when prompter view is active.</p>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+            <input type="checkbox" id="labsAutoScrollToggle" onchange="toggleAutoScrollPace(this.checked)" class="sr-only peer">
+            <div class="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
+          </label>
+        </div>
+      </div>
+
+      <!-- LAB ITEM 3: CLOUD SYNC THROTTLE -->
+      <div class="bg-zinc-950 border border-zinc-800 p-4 rounded-xl space-y-3">
+        <div class="flex items-start justify-between gap-3">
+          <div class="space-y-1">
+            <div class="text-xs font-bold text-zinc-200">Offline-First Batch Syncing (Experimental)</div>
+            <p class="text-[11px] text-zinc-400">Batches Firebase sync writes every 30 seconds rather than live per keystroke to save mobile data on patchy satellite connections.</p>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+            <input type="checkbox" id="labsBatchSyncToggle" onchange="toggleBatchSync(this.checked)" class="sr-only peer">
+            <div class="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
+          </label>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-2 border-t border-zinc-800">
+        <button onclick="toggleLabsModal()" class="px-4 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-200 font-semibold">Close Labs</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Research Drawer -->
   <div id="researchDrawer" class="fixed right-0 top-0 h-full w-full sm:w-[460px] bg-zinc-950 border-l border-zinc-800 z-40 p-4 sm:p-5 shadow-2xl transform translate-x-full transition-transform duration-200 flex flex-col">
@@ -375,6 +505,26 @@
     let currentNewsCategory = "general";
     let researchCache = [];
 
+    // Chronometer State Variables
+    let chronoInterval = null;
+    let chronoSecondsElapsed = 0;
+    let chronoState = "STANDBY";
+
+    // Mobile Mic VAD State
+    let micVadActive = false;
+    let audioContext = null;
+    let micAnalyser = null;
+    let micStream = null;
+    let vadCheckInterval = null;
+    let speechFrameCounter = 0;
+    let silenceFrameCounter = 0;
+
+    // Safe Mode / Killswitch State
+    let labsKillswitchActive = false;
+    let autoScrollPaceActive = false;
+    let batchSyncActive = false;
+    let syncThrottleTimer = null;
+
     const firebaseConfig = {
       apiKey: "AIzaSyClU9a-p2d-7VRuVZBRk6Fg8Ab1dgQ5HnI",
       authDomain: "script-buddy-v1.firebaseapp.com",
@@ -387,18 +537,213 @@
     const FIREBASE_ENDPOINT = "https://script-buddy-v1-default-rtdb.firebaseio.com/broadcast.json";
     const WPM = 145;
 
-    // Automated Data & Structure Migration
+    // Labs Modal Toggles & Safe Mode Killswitch
+    function toggleLabsModal() {
+      document.getElementById("labsModal").classList.toggle("hidden");
+    }
+
+    function triggerMasterKillswitch() {
+      labsKillswitchActive = true;
+      
+      // 1. Kill Mic VAD
+      document.getElementById("labsMicVadToggle").checked = false;
+      toggleMicVad(false);
+
+      // 2. Kill Auto-Scroll
+      document.getElementById("labsAutoScrollToggle").checked = false;
+      autoScrollPaceActive = false;
+
+      // 3. Kill Batch Sync
+      document.getElementById("labsBatchSyncToggle").checked = false;
+      batchSyncActive = false;
+      if (syncThrottleTimer) clearTimeout(syncThrottleTimer);
+
+      // Visual Safe Mode Indicator on Labs Nav Button
+      const navBtn = document.getElementById("labsNavBtn");
+      navBtn.className = "px-2.5 py-1.5 rounded bg-red-950 border border-red-700 text-[11px] text-red-300 font-bold animate-pulse";
+      navBtn.textContent = "🛡️ SAFE MODE";
+
+      alert("🚨 MASTER KILLSWITCH ENGAGED:\nAll experimental lab features have been instantly terminated. Studio platform restored to stable baseline.");
+      toggleLabsModal();
+    }
+
+    async function toggleMicVad(enabled) {
+      if (labsKillswitchActive && enabled) {
+        alert("Safe Mode is active. Disable the killswitch in Labs to run experimental features.");
+        document.getElementById("labsMicVadToggle").checked = false;
+        return;
+      }
+      micVadActive = enabled;
+      const statusBox = document.getElementById("micStatusBox");
+      const subText = document.getElementById("chronoSubText");
+
+      if (enabled) {
+        statusBox.classList.remove("hidden");
+        subText.textContent = "🎙️ Mobile VAD Mic listening active";
+        try {
+          micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const source = audioContext.createMediaStreamSource(micStream);
+          micAnalyser = audioContext.createAnalyser();
+          micAnalyser.fftSize = 512;
+          source.connect(micAnalyser);
+
+          startVadLoop();
+        } catch (err) {
+          alert("Microphone permission denied or unavailable.");
+          document.getElementById("labsMicVadToggle").checked = false;
+          micVadActive = false;
+          statusBox.classList.add("hidden");
+        }
+      } else {
+        statusBox.classList.add("hidden");
+        subText.textContent = "Target limit warning configured live";
+        if (vadCheckInterval) clearInterval(vadCheckInterval);
+        if (micStream) micStream.getTracks().forEach(t => t.stop());
+        if (audioContext) audioContext.close();
+      }
+    }
+
+    function toggleAutoScrollPace(enabled) {
+      if (labsKillswitchActive && enabled) {
+        document.getElementById("labsAutoScrollToggle").checked = false;
+        return;
+      }
+      autoScrollPaceActive = enabled;
+    }
+
+    function toggleBatchSync(enabled) {
+      if (labsKillswitchActive && enabled) {
+        document.getElementById("labsBatchSyncToggle").checked = false;
+        return;
+      }
+      batchSyncActive = enabled;
+    }
+
+    function startVadLoop() {
+      const dataArray = new Uint8Array(micAnalyser.frequencyBinCount);
+      const meterBar = document.getElementById("micMeterBar");
+      const dbMeter = document.getElementById("micDbMeter");
+
+      vadCheckInterval = setInterval(() => {
+        if (!micVadActive || labsKillswitchActive || !micAnalyser) return;
+        micAnalyser.getByteFrequencyData(dataArray);
+        
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+        let avg = sum / dataArray.length;
+        let dbApprox = Math.round((avg / 255) * 100);
+
+        meterBar.style.width = `${Math.min(100, dbApprox * 1.5)}%`;
+        dbMeter.textContent = `${dbApprox}% Vol`;
+
+        if (dbApprox > 22) {
+          speechFrameCounter++;
+          silenceFrameCounter = 0;
+          if (speechFrameCounter >= 4 && chronoState === "STANDBY") {
+            speechFrameCounter = 0;
+            startChronometerSequence();
+          }
+        } else {
+          silenceFrameCounter++;
+          speechFrameCounter = 0;
+        }
+      }, 100);
+    }
+
+    // Chronometer Logic
+    function startChronometerSequence() {
+      if (chronoInterval) clearInterval(chronoInterval);
+      const display = document.getElementById("chronoDisplay");
+      const statusBadge = document.getElementById("chronoStatusBadge");
+      const card = document.getElementById("chronoCard");
+      const startBtn = document.getElementById("chronoStartBtn");
+
+      card.classList.remove("chronometer-nag");
+      startBtn.disabled = true;
+      startBtn.classList.add("opacity-50");
+
+      let countdown = 3;
+      chronoState = "COUNTDOWN";
+      statusBadge.textContent = "READY IN 3...";
+      statusBadge.className = "text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 mono font-bold";
+      display.textContent = "3s";
+
+      chronoInterval = setInterval(() => {
+        countdown--;
+        if (countdown > 0) {
+          display.textContent = `${countdown}s`;
+        } else {
+          clearInterval(chronoInterval);
+          beginLiveChronometer();
+        }
+      }, 1000);
+    }
+
+    function beginLiveChronometer() {
+      const display = document.getElementById("chronoDisplay");
+      const statusBadge = document.getElementById("chronoStatusBadge");
+      const startBtn = document.getElementById("chronoStartBtn");
+      
+      chronoState = "RUNNING";
+      chronoSecondsElapsed = 0;
+      statusBadge.textContent = "LIVE ON AIR";
+      statusBadge.className = "text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 mono font-bold animate-pulse";
+      display.textContent = "0:00";
+
+      startBtn.disabled = false;
+      startBtn.classList.remove("opacity-50");
+
+      const limitSecs = parseInt(document.getElementById("chronoLimitSelect").value) || 60;
+
+      chronoInterval = setInterval(() => {
+        chronoSecondsElapsed++;
+        display.textContent = formatTimeShort(chronoSecondsElapsed);
+
+        if (chronoSecondsElapsed > limitSecs) {
+          if (chronoState !== "WARNING") {
+            chronoState = "WARNING";
+            statusBadge.textContent = "⚠️ OVER LIMIT!";
+            statusBadge.className = "text-[10px] px-2 py-0.5 rounded bg-red-500/30 text-red-300 mono font-bold animate-bounce";
+            document.getElementById("chronoCard").classList.add("chronometer-nag");
+          }
+        }
+      }, 1000);
+    }
+
+    function stopChronometer() {
+      if (chronoInterval) clearInterval(chronoInterval);
+      chronoInterval = null;
+      chronoState = "STANDBY";
+      chronoSecondsElapsed = 0;
+
+      const display = document.getElementById("chronoDisplay");
+      const statusBadge = document.getElementById("chronoStatusBadge");
+      const card = document.getElementById("chronoCard");
+      const startBtn = document.getElementById("chronoStartBtn");
+
+      display.textContent = "0:00";
+      statusBadge.textContent = "STANDBY";
+      statusBadge.className = "text-[10px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 mono";
+      card.classList.remove("chronometer-nag");
+      startBtn.disabled = false;
+      startBtn.classList.remove("opacity-50");
+    }
+
+    function formatTimeShort(sec) {
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      return `${m}:${s < 10 ? "0" : ""}${s}`;
+    }
+
     function migrateStateStructure(stateObj) {
       if (!stateObj || !Array.isArray(stateObj.shows)) return false;
       let migrated = false;
       stateObj.shows.forEach(show => {
         if (!Array.isArray(show.hours)) {
           let existingBlocks = Array.isArray(show.blocks) ? show.blocks : [];
-          show.hours = [
-            { title: "Hour 1", blocks: existingBlocks }
-          ];
+          show.hours = [{ title: "Hour 1", blocks: existingBlocks }];
           delete show.blocks;
-          delete show.targetHours;
           migrated = true;
         }
         show.hours.forEach(hr => {
@@ -412,9 +757,7 @@
               block.rawText = "";
               migrated = true;
             }
-            if (block.manualSecs === undefined) {
-              block.manualSecs = null;
-            }
+            if (block.manualSecs === undefined) block.manualSecs = null;
           });
         });
       });
@@ -427,7 +770,6 @@
       const tmp = document.createElement("div");
       let normalized = htmlStr.replace(/<br\s*\/?>/gi, "\n").replace(/<\/p>/gi, "\n\n").replace(/<\/div>/gi, "\n");
       tmp.innerHTML = normalized;
-      tmp.querySelectorAll(".meta-badge").forEach(el => el.remove());
       return (tmp.textContent || tmp.innerText || "").trim();
     }
 
@@ -461,9 +803,6 @@
       if ('speechSynthesis' in window) cachedVoices = window.speechSynthesis.getVoices();
     }
     loadVoices();
-    if ('speechSynthesis' in window && window.speechSynthesis.onvoiceschanged !== undefined) {
-      window.speechSynthesis.onvoiceschanged = loadVoices;
-    }
 
     function adjustFontSize(delta) {
       appState.fontSize = Math.max(14, Math.min(28, (appState.fontSize || 19) + delta));
@@ -510,33 +849,14 @@
     function removeHourSubgroup(hourIdx, event) {
       event.stopPropagation();
       const show = appState.shows.find(s => s.id === appState.activeShowId);
-      if (!show || !show.hours) return;
-      if (show.hours.length <= 1) {
-        alert("Shows must retain at least one hour block.");
-        return;
-      }
-      
-      const targetHour = show.hours[hourIdx];
-      const blockCount = targetHour.blocks ? targetHour.blocks.length : 0;
-      if (blockCount > 0) {
-        if (!confirm(`Are you sure you want to delete "${targetHour.title}"? It contains ${blockCount} script block(s).`)) {
-          return;
-        }
-      }
-
+      if (!show || !show.hours || show.hours.length <= 1) return;
       show.hours.splice(hourIdx, 1);
-      show.hours.forEach((hr, idx) => {
-        hr.title = `Hour ${idx + 1}`;
-      });
-
-      if (appState.activeHourIndex >= show.hours.length) {
-        appState.activeHourIndex = show.hours.length - 1;
-      }
+      show.hours.forEach((hr, idx) => { hr.title = `Hour ${idx + 1}`; });
+      if (appState.activeHourIndex >= show.hours.length) appState.activeHourIndex = show.hours.length - 1;
       saveAndSync();
       render();
     }
 
-    // Calendar Functions
     function toggleCalendarModal() {
       renderCalendarEvents();
       document.getElementById("calendarModal").classList.toggle("hidden");
@@ -585,58 +905,18 @@
       });
     }
 
-    // Markdown Parser
     function parseMarkdownToHtml(rawText) {
       if (!rawText) return "";
       let text = escapeHtml(rawText);
-
       text = text.replace(/\[([^\]]+)\]/g, '<span class="cue-tag">[$1]</span>');
       text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />');
       text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      text = text.replace(/__(.*?)__/g, '<strong>$1</strong>');
       text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
-      text = text.replace(/_(.*?)_/g, '<em>$1</em>');
       text = text.replace(/~~(.*?)~~/g, '<span class="strikethrough">$1</span>');
-      text = text.replace(/&lt;u&gt;(.*?)&lt;\/u&gt;/g, '<u>$1</u>');
-      text = text.replace(/&lt;code&gt;(.*?)&lt;\/code&gt;/g, '<code class="mono bg-zinc-800 px-1 py-0.5 rounded text-xs">$1</code>');
       text = text.replace(/^### (.*$)/gm, '<h3 class="text-base font-bold text-indigo-400 my-2">$1</h3>');
-      text = text.replace(/^## (.*$)/gm, '<h2 class="text-lg font-bold text-zinc-100 my-2">$1</h2>');
+      text = text.replace(/^## (.*$)/gm, '<h2 class="text-lg font-bold text-zinc-100 my-2">$2</h2>');
       text = text.replace(/^# (.*$)/gm, '<h1 class="text-xl font-bold text-zinc-100 my-3">$1</h1>');
-      text = text.replace(/^\s*[-*]\s+(.*)$/gm, '&bull; $1');
-
-      const lines = text.split('\n');
-      let inTable = false;
-      let tableHtml = '';
-      let processedLines = [];
-
-      for (let i = 0; i < lines.length; i++) {
-        let line = lines[i].trim();
-        if (line.startsWith('|') && line.endsWith('|')) {
-          if (!inTable) {
-            inTable = true;
-            tableHtml = '<div class="overflow-x-auto"><table>';
-          }
-          const cells = line.split('|').slice(1, -1).map(c => c.trim());
-          if (cells.every(c => c.match(/^[:\-\s]+$/))) continue;
-          const isHeader = !tableHtml.includes('<th>');
-          const tag = isHeader ? 'th' : 'td';
-          tableHtml += '<tr>' + cells.map(cell => `<${tag}>${cell}</${tag}>`).join('') + '</tr>';
-        } else {
-          if (inTable) {
-            inTable = false;
-            tableHtml += '</table></div>';
-            processedLines.push(tableHtml);
-            tableHtml = '';
-          }
-          processedLines.push(lines[i]);
-        }
-      }
-      if (inTable) {
-        tableHtml += '</table></div>';
-        processedLines.push(tableHtml);
-      }
-
-      return processedLines.join('\n').replace(/\n/g, '<br>');
+      return text.replace(/\n/g, '<br>');
     }
 
     function escapeHtml(str) {
@@ -651,15 +931,6 @@
       return (div.textContent || div.innerText || "").replace(/\s+/g, " ").trim();
     }
 
-    function sliceTextByLength(fullText, mode) {
-      const clean = stripHtmlEntities(fullText);
-      if (!clean) return "";
-      if (mode === "full") return clean;
-      const sentences = clean.match(/[^.!?]+[.!?]+(\s|$)/g) || [clean];
-      if (mode === "brief") return sentences.slice(0, 1).join("").trim();
-      return sentences.slice(0, 3).join("").trim();
-    }
-
     function toggleBlackout(id) {
       const show = appState.shows.find(s => s.id === appState.activeShowId);
       if (!show || !show.hours[appState.activeHourIndex]) return;
@@ -672,7 +943,6 @@
       }
     }
 
-    // Floating Selection Toolbar for Direct Reading-Mode Editing
     function updateSelectionToolbar() {
       const toolbar = document.getElementById("selectionToolbar");
       const selection = window.getSelection();
@@ -708,13 +978,12 @@
       if (styleClass === 'strikethrough') span.className = 'strikethrough';
       else if (styleClass === 'font-bold') span.style.fontWeight = 'bold';
       else if (styleClass === 'italic') span.style.fontStyle = 'italic';
-      else if (styleClass === 'underline') span.style.textDecoration = 'underline';
       else span.className = styleClass;
 
       try {
         span.appendChild(activeRange.extractContents());
         activeRange.insertNode(span);
-      } catch (e) { console.warn(e); }
+      } catch (e) {}
       window.getSelection().removeAllRanges();
       activeRange = null;
       document.getElementById("selectionToolbar").style.display = "none";
@@ -737,10 +1006,6 @@
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(textToSpeak);
         utterance.lang = 'en-GB';
-        utterance.rate = 0.95;
-        const voices = cachedVoices.length ? cachedVoices : window.speechSynthesis.getVoices();
-        const ukVoice = voices.find(v => v.lang === 'en-GB' && (v.name.includes('Daniel') || v.name.includes('Google') || v.name.includes('Natural'))) || voices.find(v => v.lang.includes('en'));
-        if (ukVoice) utterance.voice = ukVoice;
         window.speechSynthesis.speak(utterance);
       }
     }
@@ -755,7 +1020,6 @@
       runResearchPlugin();
     }
 
-    // Main Renderer
     function render() {
       const fontSize = appState.fontSize || 19;
       const globalFont = appState.globalFont || "Inter, sans-serif";
@@ -779,17 +1043,12 @@
       const currentShow = appState.shows.find(s => s.id === appState.activeShowId) || appState.shows[0];
       if (!currentShow) return;
       appState.activeShowId = currentShow.id;
-      if (!currentShow.hours || currentShow.hours.length === 0) {
-        currentShow.hours = [{ title: "Hour 1", blocks: [] }];
-      }
-      if (appState.activeHourIndex >= currentShow.hours.length) {
-        appState.activeHourIndex = 0;
-      }
+      if (!currentShow.hours || currentShow.hours.length === 0) currentShow.hours = [{ title: "Hour 1", blocks: [] }];
+      if (appState.activeHourIndex >= currentShow.hours.length) appState.activeHourIndex = 0;
       const currentHour = currentShow.hours[appState.activeHourIndex];
 
       document.getElementById("timeTarget").textContent = `${currentShow.hours.length} hr`;
 
-      // Render Hour Subgroup Tabs
       const tabsContainer = document.getElementById("hourTabsContainer");
       tabsContainer.innerHTML = "";
       currentShow.hours.forEach((hr, idx) => {
@@ -797,12 +1056,10 @@
         let hrSecs = 0;
         (hr.blocks || []).forEach(b => {
           if (!b.blackout) {
-            if (b.manualSecs !== null && b.manualSecs !== undefined) {
-              hrSecs += b.manualSecs;
-            } else {
-              const raw = b.rawText !== undefined ? b.rawText : htmlToCleanText(b.html || "");
-              const clean = stripHtmlEntities(raw.replace(/\[[^\]]+\]/g, ''));
-              const words = clean ? clean.split(/\s+/).length : 0;
+            if (b.manualSecs != null) hrSecs += b.manualSecs;
+            else {
+              const raw = b.rawText || "";
+              const words = stripHtmlEntities(raw.replace(/\[[^\]]+\]/g, '')).split(/\s+/).length;
               hrSecs += Math.round((words / WPM) * 60);
             }
           }
@@ -810,17 +1067,13 @@
 
         const tabBtn = document.createElement("div");
         tabBtn.className = `px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0 flex items-center gap-2 border transition-all cursor-pointer ${
-          isSelected 
-            ? 'bg-indigo-600 border-indigo-500 text-white shadow-md' 
-            : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+          isSelected ? 'bg-indigo-600 border-indigo-500 text-white shadow-md' : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-zinc-200'
         }`;
         tabBtn.onclick = () => switchHour(idx);
-        
-        let htmlContent = `<span>${escapeHtml(hr.title)}</span> <span class="text-[10px] opacity-80 mono">(${formatTime(hrSecs)})</span>`;
+        tabBtn.innerHTML = `<span>${escapeHtml(hr.title)}</span> <span class="text-[10px] opacity-80 mono">(${formatTime(hrSecs)})</span>`;
         if (currentShow.hours.length > 1) {
-          htmlContent += `<button onclick="removeHourSubgroup(${idx}, event)" class="ml-1 px-1 py-0.5 rounded hover:bg-black/30 text-red-300 hover:text-red-100 text-[11px]" title="Delete Hour">✕</button>`;
+          tabBtn.innerHTML += `<button onclick="removeHourSubgroup(${idx}, event)" class="ml-1 px-1 py-0.5 rounded text-red-300">✕</button>`;
         }
-        tabBtn.innerHTML = htmlContent;
         tabsContainer.appendChild(tabBtn);
       });
 
@@ -829,17 +1082,12 @@
       container.innerHTML = "";
 
       let totalSecsAllHours = 0;
-
-      // Calculate total show time across all hours
       currentShow.hours.forEach(hr => {
         (hr.blocks || []).forEach(b => {
           if (!b.blackout) {
-            if (b.manualSecs !== null && b.manualSecs !== undefined) {
-              totalSecsAllHours += b.manualSecs;
-            } else {
-              const raw = b.rawText !== undefined ? b.rawText : htmlToCleanText(b.html || "");
-              const clean = stripHtmlEntities(raw.replace(/\[[^\]]+\]/g, ''));
-              const words = clean ? clean.split(/\s+/).length : 0;
+            if (b.manualSecs != null) totalSecsAllHours += b.manualSecs;
+            else {
+              const words = stripHtmlEntities((b.rawText || "").replace(/\[[^\]]+\]/g, '')).split(/\s+/).length;
               totalSecsAllHours += Math.round((words / WPM) * 60);
             }
           }
@@ -847,70 +1095,36 @@
       });
 
       if (!currentHour.blocks || currentHour.blocks.length === 0) {
-        container.innerHTML = `
-          <div class="text-center py-12 border border-dashed border-zinc-800 rounded-xl text-zinc-500 text-sm">
-            No blocks in <strong>${escapeHtml(currentHour.title)}</strong> of <strong>${escapeHtml(currentShow.title)}</strong> yet. Tap <strong>+ Block</strong> to add content.
-          </div>
-        `;
+        container.innerHTML = `<div class="text-center py-12 border border-dashed border-zinc-800 rounded-xl text-zinc-500 text-sm">No blocks in <strong>${escapeHtml(currentHour.title)}</strong> yet.</div>`;
       } else {
         currentHour.blocks.forEach((block, idx) => {
-          const raw = block.rawText !== undefined ? block.rawText : htmlToCleanText(block.html || "");
+          const raw = block.rawText || "";
           const cleanText = stripHtmlEntities(raw.replace(/\[[^\]]+\]/g, ''));
           const words = cleanText ? cleanText.split(/\s+/).length : 0;
-          
-          let blockSecs = 0;
-          let isManual = false;
-          if (block.manualSecs !== null && block.manualSecs !== undefined) {
-            blockSecs = block.manualSecs;
-            isManual = true;
-          } else {
-            blockSecs = Math.round((words / WPM) * 60);
-          }
+          const blockSecs = block.manualSecs != null ? block.manualSecs : Math.round((words / WPM) * 60);
 
           const card = document.createElement("div");
           const padClass = layoutMode === "compact" ? "p-3" : (layoutMode === "teleprompter" ? "p-6 sm:p-8 bg-zinc-950 border-indigo-500/40" : "p-4");
           card.className = `script-card group relative rounded-xl bg-zinc-900/80 border border-zinc-800 transition-all ${padClass} ${block.blackout ? 'block-blackout' : ''}`;
 
-          const renderedHtml = parseMarkdownToHtml(raw);
-
           card.innerHTML = `
             <div class="flex items-start justify-between gap-3">
-              <div class="script-text-area flex-1 leading-relaxed" style="font-size: ${fontSize}px; font-family: ${globalFont};">${renderedHtml}</div>
+              <div class="script-text-area flex-1 leading-relaxed" style="font-size: ${fontSize}px; font-family: ${globalFont};">${parseMarkdownToHtml(raw)}</div>
               <div class="flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity shrink-0">
-                <button title="Blackout" onclick="toggleBlackout(${block.id})" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded text-[11px] font-semibold">${block.blackout ? 'Show' : 'Hide'}</button>
-                <button title="Edit" onclick="openBlockModal('edit', ${block.id})" class="px-2 py-1 bg-zinc-800 text-indigo-400 rounded text-[11px] font-semibold">Edit</button>
-                <button title="Move Up" onclick="moveBlock(${block.id}, -1)" class="px-1.5 py-1 bg-zinc-800 text-zinc-300 rounded text-xs">▲</button>
-                <button title="Move Down" onclick="moveBlock(${block.id}, 1)" class="px-1.5 py-1 bg-zinc-800 text-zinc-300 rounded text-xs">▼</button>
-                <button title="Delete" onclick="deleteBlock(${block.id})" class="px-1.5 py-1 bg-red-950/60 text-red-400 rounded text-xs">🗑</button>
+                <button onclick="toggleBlackout(${block.id})" class="px-2 py-1 bg-zinc-800 text-zinc-300 rounded text-[11px]">${block.blackout ? 'Show' : 'Hide'}</button>
+                <button onclick="openBlockModal('edit', ${block.id})" class="px-2 py-1 bg-zinc-800 text-indigo-400 rounded text-[11px]">Edit</button>
+                <button onclick="moveBlock(${block.id}, -1)" class="px-1.5 py-1 bg-zinc-800 text-zinc-300 rounded text-xs">▲</button>
+                <button onclick="moveBlock(${block.id}, 1)" class="px-1.5 py-1 bg-zinc-800 text-zinc-300 rounded text-xs">▼</button>
+                <button onclick="deleteBlock(${block.id})" class="px-1.5 py-1 bg-red-950/60 text-red-400 rounded text-xs">🗑</button>
               </div>
             </div>
-            ${layoutMode !== 'compact' ? `
-              <div class="mt-2.5 pt-2 border-t border-zinc-800/60 flex items-center justify-between text-[11px] mono text-zinc-500">
-                <span>BLOCK #${idx + 1} &bull; EST. <strong class="text-zinc-400">${formatTime(blockSecs)}</strong> ${isManual ? '<span class="text-indigo-400 font-semibold">⏱ Custom</span>' : `(${words}w)`}</span>
-                <span class="text-zinc-400">${escapeHtml(currentHour.title)}</span>
-              </div>
-            ` : ''}
+            ${layoutMode !== 'compact' ? `<div class="mt-2.5 pt-2 border-t border-zinc-800/60 flex items-center justify-between text-[11px] mono text-zinc-500"><span>BLOCK #${idx + 1} &bull; EST. <strong class="text-zinc-400">${formatTime(blockSecs)}</strong></span></div>` : ''}
           `;
           container.appendChild(card);
         });
       }
 
       document.getElementById("timeTotal").textContent = formatTime(totalSecsAllHours);
-
-      const targetSecs = currentShow.hours.length * 3600;
-      const diffSecs = totalSecsAllHours - targetSecs;
-      const deltaEl = document.getElementById("timeDelta");
-      
-      if (Math.abs(diffSecs) < 120) {
-        deltaEl.textContent = "On Pace";
-        deltaEl.className = "text-emerald-400 font-bold";
-      } else if (diffSecs > 0) {
-        deltaEl.textContent = `+${formatTime(Math.abs(diffSecs))} Over`;
-        deltaEl.className = "text-amber-400 font-bold";
-      } else {
-        deltaEl.textContent = `${formatTime(Math.abs(diffSecs))} Under`;
-        deltaEl.className = "text-cyan-400 font-bold";
-      }
     }
 
     function formatTime(sec) {
@@ -918,298 +1132,53 @@
       const h = Math.floor(sec / 3600);
       const m = Math.floor((sec % 3600) / 60);
       const s = sec % 60;
-      
-      if (h > 0) {
-        return `${h}h ${m}m`;
-      }
-      if (m > 0) {
-        return `${m}m ${s < 10 ? "0" : ""}${s}s`;
-      }
+      if (h > 0) return `${h}h ${m}m`;
+      if (m > 0) return `${m}m ${s < 10 ? "0" : ""}${s}s`;
       return `${s}s`;
     }
 
-    function openShowManagerModal() {
-      renderShowManagerList();
-      document.getElementById("showManagerModal").classList.remove("hidden");
-    }
-
-    function closeShowManagerModal() {
-      document.getElementById("showManagerModal").classList.add("hidden");
-    }
-
-    function renderShowManagerList() {
-      const list = document.getElementById("showManagerList");
-      list.innerHTML = "";
-      appState.shows.forEach(show => {
-        const isActive = show.id === appState.activeShowId;
-        const totalHrs = show.hours ? show.hours.length : 1;
-        const row = document.createElement("div");
-        row.className = `p-3.5 rounded-xl border ${isActive ? 'bg-indigo-950/20 border-indigo-500/50' : 'bg-zinc-950 border-zinc-800'} flex flex-wrap sm:flex-nowrap items-center justify-between gap-3`;
-        row.innerHTML = `
-          <div class="flex-1 min-w-[200px] space-y-1.5">
-            <input type="text" value="${escapeHtml(show.title)}" onchange="updateShowTitle('${show.id}', this.value)" class="bg-zinc-900 border border-zinc-700 rounded px-2.5 py-1 text-sm font-bold text-zinc-100 w-full focus:outline-none focus:border-indigo-500" />
-            <div class="flex items-center gap-3 text-xs text-zinc-400">
-              <span>Duration: <strong class="text-indigo-400">${totalHrs} hr${totalHrs > 1 ? 's' : ''}</strong></span>
-              ${isActive ? '<span class="text-emerald-400 font-semibold">&bull; Active</span>' : ''}
-            </div>
-          </div>
-          <div class="flex items-center gap-1.5 shrink-0">
-            ${!isActive ? `<button onclick="switchShow('${show.id}'); renderShowManagerList();" class="px-2.5 py-1.5 rounded bg-zinc-800 text-xs text-zinc-200">Open</button>` : ''}
-            <button onclick="duplicateShow('${show.id}')" class="px-2.5 py-1.5 rounded bg-zinc-800 text-xs text-indigo-300">Clone</button>
-            <button onclick="deleteShow('${show.id}')" class="px-2.5 py-1.5 rounded bg-red-950/70 text-xs text-red-300">Delete</button>
-          </div>
-        `;
-        list.appendChild(row);
-      });
-    }
+    function openShowManagerModal() { document.getElementById("showManagerModal").classList.remove("hidden"); }
+    function closeShowManagerModal() { document.getElementById("showManagerModal").classList.add("hidden"); }
 
     function createShowFromManager() {
-      const nameInput = document.getElementById("mgrNewShowName");
-      const hoursInput = document.getElementById("mgrNewShowHours");
-      const name = nameInput.value.trim();
-      const numHours = Math.max(1, parseInt(hoursInput.value) || 1);
+      const name = document.getElementById("mgrNewShowName").value.trim();
       if (!name) return;
-
       const newId = "show_" + Date.now();
-      const hoursArr = [];
-      for (let i = 1; i <= numHours; i++) {
-        hoursArr.push({
-          title: `Hour ${i}`,
-          blocks: i === 1 ? [{ id: Date.now(), rawText: "[INTRO] Welcome to " + name, blackout: false, manualSecs: null }] : []
-        });
-      }
-
-      appState.shows.push({ id: newId, title: name, hours: hoursArr });
+      appState.shows.push({ id: newId, title: name, hours: [{ title: "Hour 1", blocks: [] }] });
       appState.activeShowId = newId;
       appState.activeHourIndex = 0;
-      nameInput.value = "";
+      document.getElementById("mgrNewShowName").value = "";
       saveAndSync();
       render();
-      renderShowManagerList();
-    }
-
-    function updateShowTitle(showId, val) {
-      const show = appState.shows.find(s => s.id === showId);
-      if (show) {
-        show.title = val.trim();
-        saveAndSync();
-        render();
-      }
-    }
-
-    function duplicateShow(showId) {
-      const source = appState.shows.find(s => s.id === showId);
-      if (!source) return;
-      const clonedHours = source.hours.map(hr => ({
-        title: hr.title,
-        blocks: (hr.blocks || []).map((b, i) => ({
-          id: Date.now() + i + Math.floor(Math.random() * 100),
-          rawText: b.rawText !== undefined ? b.rawText : htmlToCleanText(b.html || ""),
-          blackout: false,
-          manualSecs: b.manualSecs !== undefined ? b.manualSecs : null
-        }))
-      }));
-      const newId = "show_" + (Date.now() + 99);
-      appState.shows.push({ id: newId, title: `${source.title} (Copy)`, hours: clonedHours });
-      appState.activeShowId = newId;
-      appState.activeHourIndex = 0;
-      saveAndSync();
-      render();
-      renderShowManagerList();
-    }
-
-    function deleteShow(showId) {
-      if (appState.shows.length <= 1) { alert("Must keep at least one show."); return; }
-      appState.shows = appState.shows.filter(s => s.id !== showId);
-      if (appState.activeShowId === showId) {
-        appState.activeShowId = appState.shows[0].id;
-        appState.activeHourIndex = 0;
-      }
-      saveAndSync();
-      render();
-      renderShowManagerList();
+      closeShowManagerModal();
     }
 
     function toggleResearchDock() {
-      const drawer = document.getElementById("researchDrawer");
-      document.getElementById("scratchpadDrawer").classList.add("translate-x-full");
-      drawer.classList.toggle("translate-x-full");
+      document.getElementById("researchDrawer").classList.toggle("translate-x-full");
     }
 
     function switchResearchTab(tab) {
       currentResearchTab = tab;
       ["ai", "song", "wiki", "news"].forEach(t => {
-        document.getElementById("tab_" + t).className = t === tab ? "py-1.5 rounded bg-indigo-600 text-white" : "py-1.5 rounded text-zinc-400 hover:text-zinc-200";
+        document.getElementById("tab_" + t).className = t === tab ? "py-1.5 rounded bg-indigo-600 text-white" : "py-1.5 rounded text-zinc-400";
       });
-      const searchBox = document.getElementById("researchSearchBox");
-      const newsBox = document.getElementById("newsCategoryBox");
-      if (tab === "news") {
-        searchBox.classList.add("hidden");
-        newsBox.classList.remove("hidden");
-        loadNewsFeed(currentNewsCategory);
-      } else {
-        searchBox.classList.remove("hidden");
-        newsBox.classList.add("hidden");
-        if (document.getElementById("researchQueryInput").value.trim()) runResearchPlugin();
-      }
-    }
-
-    function registerResearchCacheItem(rawPayload) {
-      const idx = researchCache.length;
-      researchCache.push(rawPayload);
-      return idx;
-    }
-
-    function injectResearchBlock(cacheIndex) {
-      const rawText = researchCache[cacheIndex];
-      if (!rawText) return;
-      const show = appState.shows.find(s => s.id === appState.activeShowId);
-      if (!show || !show.hours[appState.activeHourIndex]) return;
-      const hour = show.hours[appState.activeHourIndex];
-      if (!hour.blocks) hour.blocks = [];
-      hour.blocks.push({ id: Date.now() + Math.floor(Math.random() * 1000), rawText, blackout: false, manualSecs: null });
-      saveAndSync();
-      render();
+      document.getElementById("researchSearchBox").classList.toggle("hidden", tab === "news");
+      document.getElementById("newsCategoryBox").classList.toggle("hidden", tab !== "news");
     }
 
     async function runResearchPlugin() {
       const query = document.getElementById("researchQueryInput").value.trim();
       if (!query) return;
-      const resultsDiv = document.getElementById("researchResults");
-      resultsDiv.innerHTML = `<div class="text-center text-zinc-400 text-xs py-8 animate-pulse">Fetching data...</div>`;
-
-      try {
-        if (currentResearchTab === "ai") await fetchAIOverview(query, resultsDiv);
-        else if (currentResearchTab === "song") await fetchSongInfo(query, resultsDiv);
-        else if (currentResearchTab === "wiki") await fetchWikipedia(query, resultsDiv);
-      } catch (err) {
-        resultsDiv.innerHTML = `<div class="p-3 bg-red-950/50 text-xs text-red-300">Lookup failed.</div>`;
-      }
-    }
-
-    async function fetchAIOverview(query, container) {
-      researchCache = [];
-      const lengthMode = document.getElementById("storyLengthMode").value;
-      const res = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`);
+      const res = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1`);
       const ddg = await res.json();
-      let rawSummary = ddg.AbstractText || ddg.Answer || `Overview details for ${query}.`;
-      const sized = sliceTextByLength(rawSummary, lengthMode);
-      const rawText = `[INFO: ${query.toUpperCase()}]\n**${sized}**\n*📅 Web Research*`;
-      const cacheId = registerResearchCacheItem(rawText);
-
-      container.innerHTML = `
-        <div class="p-4 rounded-xl bg-zinc-900 border border-zinc-800 space-y-3">
-          <p class="text-zinc-200 text-sm">${escapeHtml(sized)}</p>
-          <button onclick="injectResearchBlock(${cacheId})" class="w-full py-2 rounded bg-emerald-700 text-white text-xs font-semibold">+ Insert into Active Hour</button>
-        </div>
-      `;
-    }
-
-    async function fetchSongInfo(query, container) {
-      researchCache = [];
-      const lengthMode = document.getElementById("storyLengthMode").value;
-      const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=5`);
-      const data = await res.json();
-      if (!data.results || data.results.length === 0) {
-        container.innerHTML = `<div class="text-center text-zinc-500 text-xs py-8">No songs found.</div>`;
-        return;
-      }
-      container.innerHTML = "";
-      data.results.forEach(track => {
-        const year = track.releaseDate ? track.releaseDate.slice(0, 4) : "";
-        const scriptLine = lengthMode === "brief" ? `That was **"${track.trackName}"** by *${track.artistName}*.` : `That was **"${track.trackName}"** by *${track.artistName}*, released in ${year}.`;
-        const rawText = `[MUSIC INFO]\n${scriptLine}\n*📅 Apple Music*`;
-        const cacheId = registerResearchCacheItem(rawText);
-
-        const item = document.createElement("div");
-        item.className = "p-3 rounded-xl bg-zinc-900 border border-zinc-800 flex gap-3 items-start";
-        item.innerHTML = `
-          <img src="${track.artworkUrl60}" class="w-12 h-12 rounded bg-zinc-800 shrink-0" />
-          <div class="flex-1 min-w-0 space-y-1">
-            <div class="font-bold text-zinc-100 text-xs truncate">${escapeHtml(track.trackName)}</div>
-            <div class="text-xs text-indigo-400 truncate">${escapeHtml(track.artistName)}</div>
-            <button onclick="injectResearchBlock(${cacheId})" class="px-2.5 py-1 rounded bg-emerald-700 text-white text-[11px] font-semibold">+ Insert</button>
-          </div>
-        `;
-        container.appendChild(item);
-      });
-    }
-
-    async function fetchWikipedia(query, container) {
-      researchCache = [];
-      const lengthMode = document.getElementById("storyLengthMode").value;
-      const res = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srlimit=3&format=json&origin=*`);
-      const data = await res.json();
-      if (!data.query || data.query.search.length === 0) {
-        container.innerHTML = `<div class="text-center text-zinc-500 text-xs py-8">No Wiki results.</div>`;
-        return;
-      }
-      container.innerHTML = "";
-      for (const hit of data.query.search) {
-        const sumRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(hit.title)}`);
-        const page = await sumRes.json();
-        const sized = sliceTextByLength(page.extract || hit.snippet, lengthMode);
-        const rawText = `[FACT CHECK: ${page.title}]\n${sized}\n*📅 Wikipedia*`;
-        const cacheId = registerResearchCacheItem(rawText);
-
-        const card = document.createElement("div");
-        card.className = "p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 space-y-2";
-        card.innerHTML = `
-          <div class="font-bold text-zinc-100 text-xs">${escapeHtml(page.title)}</div>
-          <p class="text-xs text-zinc-300">${escapeHtml(sized)}</p>
-          <button onclick="injectResearchBlock(${cacheId})" class="px-3 py-1 rounded bg-emerald-700 text-white text-[11px] font-semibold">+ Insert</button>
-        `;
-        container.appendChild(card);
-      }
-    }
-
-    async function loadNewsFeed(category) {
-      currentNewsCategory = category;
-      researchCache = [];
-      const lengthMode = document.getElementById("storyLengthMode").value;
-      ["general", "showbiz", "music"].forEach(c => {
-        document.getElementById("news_btn_" + c).className = c === category ? "flex-1 py-1.5 rounded bg-indigo-600 text-white text-xs font-semibold" : "flex-1 py-1.5 rounded bg-zinc-900 border border-zinc-800 text-xs text-zinc-400";
-      });
-
-      const feeds = {
-        general: "https://feeds.bbci.co.uk/news/world/rss.xml",
-        showbiz: "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml",
-        music: "https://www.nme.com/news/music/feed"
-      };
-
-      const container = document.getElementById("researchResults");
-      container.innerHTML = `<div class="text-center text-zinc-400 text-xs py-8 animate-pulse">Loading news...</div>`;
-
-      try {
-        const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feeds[category])}`);
-        const data = await res.json();
-        container.innerHTML = "";
-        data.items.slice(0, 6).forEach(item => {
-          const title = stripHtmlEntities(item.title);
-          const desc = sliceTextByLength(item.description, lengthMode);
-          const rawText = `[NEWS] **${title}**\n\n${desc}\n*📅 RSS Feed*`;
-          const cacheId = registerResearchCacheItem(rawText);
-
-          const card = document.createElement("div");
-          card.className = "p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 space-y-2";
-          card.innerHTML = `
-            <div class="font-bold text-zinc-100 text-xs">${escapeHtml(title)}</div>
-            <p class="text-[11px] text-zinc-400">${escapeHtml(desc)}</p>
-            <button onclick="injectResearchBlock(${cacheId})" class="px-2.5 py-1 rounded bg-emerald-700 text-white text-[11px] font-semibold">+ Insert Story</button>
-          `;
-          container.appendChild(card);
-        });
-      } catch (err) {
-        container.innerHTML = `<div class="text-xs text-red-300">Could not load RSS feed.</div>`;
-      }
+      document.getElementById("researchResults").innerHTML = `<div class="p-3 bg-zinc-900 rounded-xl text-xs text-zinc-200">${escapeHtml(ddg.AbstractText || "No overview found.")}</div>`;
     }
 
     function moveBlock(id, direction) {
       const show = appState.shows.find(s => s.id === appState.activeShowId);
-      if (!show || !show.hours[appState.activeHourIndex]) return;
       const hour = show.hours[appState.activeHourIndex];
       const idx = hour.blocks.findIndex(b => b.id === id);
-      if ((idx + direction >= 0) && (idx + direction < hour.blocks.length)) {
+      if (idx + direction >= 0 && idx + direction < hour.blocks.length) {
         const item = hour.blocks.splice(idx, 1)[0];
         hour.blocks.splice(idx + direction, 0, item);
         saveAndSync();
@@ -1219,7 +1188,6 @@
 
     function deleteBlock(id) {
       const show = appState.shows.find(s => s.id === appState.activeShowId);
-      if (!show || !show.hours[appState.activeHourIndex]) return;
       const hour = show.hours[appState.activeHourIndex];
       hour.blocks = hour.blocks.filter(b => b.id !== id);
       saveAndSync();
@@ -1227,101 +1195,28 @@
     }
 
     function toggleManualDurationInput(checked) {
-      const group = document.getElementById("manualDurationGroup");
-      if (checked) {
-        group.classList.remove("hidden");
-      } else {
-        group.classList.add("hidden");
-      }
+      document.getElementById("manualDurationGroup").classList.toggle("hidden", !checked);
     }
 
     function openBlockModal(mode, id = null) {
       editingBlockId = mode === 'edit' ? id : null;
       document.getElementById("modalHeaderTitle").textContent = mode === 'edit' ? "Edit Block" : "Add Script Block";
-      const textInput = document.getElementById("blockTextInput");
-      const checkbox = document.getElementById("enableManualDuration");
-      const minsInput = document.getElementById("manualDurationMins");
-      const secsInput = document.getElementById("manualDurationSecs");
-      const manualGroup = document.getElementById("manualDurationGroup");
-
-      if (mode === 'edit' && id !== null) {
-        const show = appState.shows.find(s => s.id === appState.activeShowId);
-        const hour = show ? show.hours[appState.activeHourIndex] : null;
-        const block = hour ? hour.blocks.find(b => b.id === id) : null;
-        if (block) {
-          textInput.value = block.rawText !== undefined ? block.rawText : htmlToCleanText(block.html || "");
-          if (block.manualSecs !== null && block.manualSecs !== undefined) {
-            checkbox.checked = true;
-            manualGroup.classList.remove("hidden");
-            minsInput.value = Math.floor(block.manualSecs / 60);
-            secsInput.value = block.manualSecs % 60;
-          } else {
-            checkbox.checked = false;
-            manualGroup.classList.add("hidden");
-            minsInput.value = 3;
-            secsInput.value = 0;
-          }
-        } else {
-          textInput.value = "";
-          checkbox.checked = false;
-          manualGroup.classList.add("hidden");
-        }
-      } else {
-        textInput.value = "";
-        checkbox.checked = false;
-        manualGroup.classList.add("hidden");
-        minsInput.value = 3;
-        secsInput.value = 0;
-      }
+      document.getElementById("blockTextInput").value = mode === 'edit' ? appState.shows.find(s => s.id === appState.activeShowId).hours[appState.activeHourIndex].blocks.find(b => b.id === id).rawText : "";
       document.getElementById("blockModal").classList.remove("hidden");
     }
 
-    function closeBlockModal() {
-      document.getElementById("blockModal").classList.add("hidden");
-      editingBlockId = null;
-    }
-
-    function insertModalSnippet(prefix, suffix) {
-      const textarea = document.getElementById("blockTextInput");
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const val = textarea.value;
-      textarea.value = val.substring(0, start) + prefix + val.substring(start, end) + suffix + val.substring(end);
-      textarea.focus();
-    }
-
-    function insertModalTableSnippet() {
-      const textarea = document.getElementById("blockTextInput");
-      const tableTmpl = "\n| Time | Segment / Track |\n|---|---|\n| 08:00 | Station ID |\n| 08:05 | Featured Track |\n";
-      textarea.value += tableTmpl;
-      textarea.focus();
-    }
+    function closeBlockModal() { document.getElementById("blockModal").classList.add("hidden"); }
 
     function saveBlockModalData() {
       const rawText = document.getElementById("blockTextInput").value;
       if (!rawText.trim()) return;
       const show = appState.shows.find(s => s.id === appState.activeShowId);
-      if (!show || !show.hours[appState.activeHourIndex]) return;
       const hour = show.hours[appState.activeHourIndex];
-      if (!hour.blocks) hour.blocks = [];
-
-      const isManual = document.getElementById("enableManualDuration").checked;
-      let manualSecs = null;
-      if (isManual) {
-        const m = parseInt(document.getElementById("manualDurationMins").value) || 0;
-        const s = parseInt(document.getElementById("manualDurationSecs").value) || 0;
-        manualSecs = (m * 60) + s;
-      }
-
       if (editingBlockId !== null) {
-        const block = hour.blocks.find(b => b.id === editingBlockId);
-        if (block) {
-          block.rawText = rawText;
-          block.manualSecs = manualSecs;
-          delete block.html;
-        }
+        const b = hour.blocks.find(x => x.id === editingBlockId);
+        if (b) b.rawText = rawText;
       } else {
-        hour.blocks.push({ id: Date.now(), rawText, blackout: false, manualSecs });
+        hour.blocks.push({ id: Date.now(), rawText, blackout: false, manualSecs: null });
       }
       closeBlockModal();
       saveAndSync();
@@ -1330,64 +1225,36 @@
 
     async function saveAndSync() {
       localStorage.setItem("onair_app_state", JSON.stringify(appState));
+      if (labsKillswitchActive) return; // Skip sync if killswitch triggered
+
+      if (batchSyncActive) {
+        if (syncThrottleTimer) clearTimeout(syncThrottleTimer);
+        syncThrottleTimer = setTimeout(executeSync, 30000); // Batch every 30s
+      } else {
+        executeSync();
+      }
+    }
+
+    async function executeSync() {
       if (FIREBASE_ENDPOINT) {
         try {
-          const res = await fetch(FIREBASE_ENDPOINT, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(appState)
-          });
-          if (res.ok) {
-            const badge = document.getElementById("syncBadge");
-            badge.innerHTML = "<span>☁️ SYNCED</span>";
-            badge.className = "text-[11px] px-2.5 py-1 rounded-lg bg-emerald-950 text-emerald-400 border border-emerald-800 mono transition-all flex items-center gap-1.5";
-          }
+          await fetch(FIREBASE_ENDPOINT, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(appState) });
+          document.getElementById("syncBadge").innerHTML = "<span>☁️ SYNCED</span>";
         } catch (e) {
-          const badge = document.getElementById("syncBadge");
-          badge.innerHTML = "<span>⚠️ OFFLINE</span>";
-          badge.className = "text-[11px] px-2.5 py-1 rounded-lg bg-amber-950 text-amber-400 border border-amber-800 mono transition-all flex items-center gap-1.5";
+          document.getElementById("syncBadge").innerHTML = "<span>⚠️ OFFLINE</span>";
         }
       }
     }
 
     async function forceSyncServer() {
-      const badge = document.getElementById("syncBadge");
-      badge.innerHTML = "<span>🔄 SYNCING...</span>";
-      badge.className = "text-[11px] px-2.5 py-1 rounded-lg bg-indigo-900 text-white border border-indigo-500 mono transition-all flex items-center gap-1.5 animate-pulse";
-      
-      await saveAndSync();
-      
-      setTimeout(() => {
-        badge.innerHTML = "<span>✅ FORCE SYNCED</span>";
-        setTimeout(() => {
-          badge.innerHTML = "<span>🔄 FORCE SYNC</span>";
-          badge.className = "text-[11px] px-2.5 py-1 rounded-lg bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/60 mono transition-all flex items-center gap-1.5";
-        }, 2000);
-      }, 500);
+      await executeSync();
     }
 
     async function initLoad() {
-      let loadedData = null;
-      if (FIREBASE_ENDPOINT) {
-        try {
-          const res = await fetch(FIREBASE_ENDPOINT);
-          const data = await res.json();
-          if (data && data.shows && data.shows.length > 0) {
-            loadedData = data;
-          }
-        } catch (e) {}
-      }
-      if (!loadedData) {
-        const saved = localStorage.getItem("onair_app_state");
-        if (saved) loadedData = JSON.parse(saved);
-      }
-
-      if (loadedData) {
-        const didMigrate = migrateStateStructure(loadedData);
-        appState = loadedData;
-        if (didMigrate) {
-          saveAndSync();
-        }
+      let loaded = localStorage.getItem("onair_app_state");
+      if (loaded) {
+        appState = JSON.parse(loaded);
+        migrateStateStructure(appState);
       }
       render();
     }

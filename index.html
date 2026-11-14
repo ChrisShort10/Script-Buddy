@@ -31,7 +31,6 @@
       padding: 1px 7px; border-radius: 5px; margin-right: 6px; vertical-align: middle;
     }
 
-    /* Script block formatting & tables */
     .script-text-area {
       white-space: pre-wrap;
       word-break: break-word;
@@ -94,7 +93,7 @@
     </div>
   </div>
 
-  <!-- Floating Selection Toolbar (Reading Mode Interactivity) -->
+  <!-- Floating Selection Toolbar -->
   <div id="selectionToolbar" onmousedown="event.preventDefault()">
     <button type="button" onclick="applyInlineStyle('hl-yellow')" class="w-6 h-6 rounded bg-yellow-400 hover:scale-110 transition-transform" title="Highlight Yellow"></button>
     <button type="button" onclick="applyInlineStyle('hl-cyan')" class="w-6 h-6 rounded bg-cyan-400 hover:scale-110 transition-transform" title="Highlight Cyan"></button>
@@ -113,11 +112,10 @@
   <header class="sticky top-0 z-30 bg-zinc-950/95 backdrop-blur border-b border-zinc-800 px-3 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-3">
     <div class="flex items-center gap-2">
       <span class="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
-      <select id="showSelector" onchange="switchShow(this.value)" class="bg-zinc-900 border border-zinc-700 text-zinc-100 font-bold px-2.5 py-1.5 rounded-lg text-xs sm:text-sm focus:outline-none focus:border-indigo-500 max-w-[150px] sm:max-w-xs">
+      <select id="showSelector" onchange="switchShow(this.value)" class="bg-zinc-900 border border-zinc-700 text-zinc-100 font-bold px-2.5 py-1.5 rounded-lg text-xs sm:text-sm focus:outline-none focus:border-indigo-500 max-w-[140px] sm:max-w-xs">
         <!-- Populated dynamically -->
       </select>
       <button onclick="openShowManagerModal()" class="px-2 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-[11px] sm:text-xs text-zinc-300 font-medium">Shows</button>
-      <!-- Force Sync Button & Badge -->
       <button onclick="forceSyncServer()" id="syncBadge" class="text-[11px] px-2.5 py-1 rounded-lg bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/60 mono transition-all flex items-center gap-1.5" title="Click to Force Sync All Data to Server">
         <span>🔄 FORCE SYNC</span>
       </button>
@@ -125,29 +123,26 @@
 
     <!-- Backtiming & Live Stats Bar -->
     <div class="flex items-center gap-2 sm:gap-4 text-[11px] sm:text-xs mono bg-zinc-900/80 border border-zinc-800 px-2.5 py-1.5 rounded-lg">
-      <div><span class="text-zinc-500">TOT:</span> <span id="timeTotal" class="text-zinc-200 font-bold">0:00</span></div>
+      <div><span class="text-zinc-500">TOT:</span> <span id="timeTotal" class="text-zinc-200 font-bold">0m 00s</span></div>
       <div><span class="text-zinc-500">TGT:</span> <span id="timeTarget" class="text-indigo-400 font-bold">1h</span></div>
       <div><span class="text-zinc-500">DLT:</span> <span id="timeDelta" class="text-emerald-400 font-bold">On Pace</span></div>
     </div>
 
     <!-- Pro Tools & Actions -->
     <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-      <!-- Font Family Selector -->
-      <select id="globalFontFamily" onchange="switchGlobalFont(this.value)" class="bg-zinc-900 border border-zinc-700 text-zinc-300 text-xs px-2 py-1.5 rounded-lg focus:outline-none focus:border-indigo-500">
+      <select id="globalFontFamily" onchange="switchGlobalFont(this.value)" class="hidden sm:inline-block bg-zinc-900 border border-zinc-700 text-zinc-300 text-xs px-2 py-1.5 rounded-lg focus:outline-none focus:border-indigo-500">
         <option value="Inter, sans-serif">Inter</option>
         <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
         <option value="'Playfair Display', serif">Playfair Display</option>
         <option value="'Fira Code', monospace">Fira Code</option>
       </select>
 
-      <!-- Font Size Stepper -->
       <div class="flex items-center bg-zinc-900 border border-zinc-700 rounded-lg p-0.5 text-xs">
         <button onclick="adjustFontSize(-1)" class="px-2 py-1 hover:bg-zinc-800 text-zinc-300 rounded font-bold" title="Decrease Font Size">A-</button>
         <span id="fontSizeIndicator" class="px-1.5 text-zinc-400 mono text-[11px]">19px</span>
         <button onclick="adjustFontSize(1)" class="px-2 py-1 hover:bg-zinc-800 text-zinc-300 rounded font-bold" title="Increase Font Size">A+</button>
       </div>
 
-      <!-- Layout Mode Selector -->
       <select id="layoutModeSelector" onchange="switchLayoutMode(this.value)" class="bg-zinc-900 border border-zinc-700 text-zinc-300 text-xs px-2 py-1.5 rounded-lg focus:outline-none focus:border-indigo-500">
         <option value="standard">Standard</option>
         <option value="teleprompter">Prompter</option>
@@ -156,7 +151,6 @@
 
       <button onclick="toggleCalendarModal()" class="px-2.5 py-1.5 rounded bg-indigo-950/70 hover:bg-indigo-900/80 border border-indigo-700/70 text-xs text-indigo-300 font-semibold" title="Show Calendar">📅</button>
       <button onclick="toggleResearchDock()" class="px-2.5 py-1.5 rounded bg-emerald-950/70 hover:bg-emerald-900/80 border border-emerald-700/70 text-xs text-emerald-300 font-semibold">🌐 Research</button>
-      <button onclick="toggleScratchpad()" class="hidden sm:inline-block px-2.5 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 font-medium">Scratch</button>
       <button onclick="openBlockModal('add')" class="px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-sm">+ Block</button>
       <button onclick="handleLogout()" class="px-2 py-1.5 rounded bg-zinc-900 hover:bg-red-950 border border-zinc-700 hover:border-red-800 text-xs text-zinc-400 hover:text-red-300" title="Sign Out">✕</button>
     </div>
@@ -164,10 +158,12 @@
 
   <!-- Main Content Workspace -->
   <main id="mainWorkspace" class="flex-1 max-w-4xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
-    <div class="bg-zinc-900/60 border border-zinc-800 p-2.5 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs">
-      <div class="text-zinc-400 font-medium">💡 Reading Mode Tip:</div>
-      <div class="text-zinc-300">Highlight any text directly in the blocks below to <strong>highlight</strong>, <strong>strike through</strong>, or <strong>pronounce</strong> instantly.</div>
-      <div class="text-emerald-400 text-[11px]">Interactive Reading App</div>
+    <!-- Hour Subgroups Selector Bar -->
+    <div class="bg-zinc-900/80 border border-zinc-800 p-2.5 rounded-xl flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-1.5 overflow-x-auto py-1" id="hourTabsContainer">
+        <!-- Populated dynamically -->
+      </div>
+      <button onclick="addHourSubgroup()" class="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-xs text-indigo-300 font-semibold shrink-0">+ Add Hour</button>
     </div>
 
     <div id="blocksContainer" class="space-y-4"></div>
@@ -178,7 +174,7 @@
     <div class="flex justify-between items-center pb-3 border-b border-zinc-800">
       <div>
         <h3 class="font-bold text-sm text-zinc-100 flex items-center gap-2">🌐 Studio Research & Live News</h3>
-        <p class="text-[11px] text-zinc-500">Choose story depth & pull straight into script blocks</p>
+        <p class="text-[11px] text-zinc-500">Choose story depth & pull straight into active hour</p>
       </div>
       <button onclick="toggleResearchDock()" class="text-zinc-400 hover:text-white text-xl px-2">&times;</button>
     </div>
@@ -217,15 +213,6 @@
     <div id="researchResults" class="flex-1 overflow-y-auto space-y-3 pr-1 text-sm">
       <div class="text-center text-zinc-500 text-xs py-10">Select a plugin tab above or highlight text and hit <strong class="text-emerald-400">🔍 Lookup</strong>.</div>
     </div>
-  </div>
-
-  <!-- Scratchpad Drawer -->
-  <div id="scratchpadDrawer" class="fixed right-0 top-0 h-full w-80 bg-zinc-950 border-l border-zinc-800 z-40 p-5 shadow-2xl transform translate-x-full transition-transform duration-200 flex flex-col">
-    <div class="flex justify-between items-center mb-3">
-      <h3 class="font-bold text-sm text-zinc-200">Presenter Scratchpad & Notes</h3>
-      <button onclick="toggleScratchpad()" class="text-zinc-400 hover:text-white text-lg">&times;</button>
-    </div>
-    <textarea id="scratchpadText" oninput="saveScratchpad()" placeholder="Jot down caller names, contest codes..." class="w-full flex-1 bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500 font-mono resize-none"></textarea>
   </div>
 
   <!-- Studio Show Calendar Modal -->
@@ -270,8 +257,8 @@
     <div class="bg-zinc-900 border border-zinc-700 rounded-xl max-w-2xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] flex flex-col">
       <div class="flex justify-between items-center border-b border-zinc-800 pb-3">
         <div>
-          <h2 class="text-lg font-bold text-white">Show & Group Manager</h2>
-          <p class="text-xs text-zinc-400">Create, clone templates, or adjust target hours</p>
+          <h2 class="text-lg font-bold text-white">Show Manager</h2>
+          <p class="text-xs text-zinc-400">Create, clone templates, or manage multi-hour shows</p>
         </div>
         <button onclick="closeShowManagerModal()" class="text-zinc-400 hover:text-white text-xl">&times;</button>
       </div>
@@ -279,11 +266,11 @@
       <div class="bg-zinc-950 border border-zinc-800 p-3.5 rounded-xl flex flex-wrap sm:flex-nowrap items-end gap-2.5">
         <div class="flex-1 w-full">
           <label class="block text-[11px] text-zinc-400 mb-1">New Show Name</label>
-          <input id="mgrNewShowName" type="text" placeholder="e.g., Friday Rock & Metal Show" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
+          <input id="mgrNewShowName" type="text" placeholder="e.g., Saturday Weekend Warmup" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
         </div>
         <div class="w-28">
-          <label class="block text-[11px] text-zinc-400 mb-1">Hours</label>
-          <input id="mgrNewShowHours" type="number" step="0.5" min="0.5" value="2" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
+          <label class="block text-[11px] text-zinc-400 mb-1">Initial Hours</label>
+          <input id="mgrNewShowHours" type="number" min="1" max="5" value="3" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
         </div>
         <button onclick="createShowFromManager()" class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white shrink-0">+ Create</button>
       </div>
@@ -296,7 +283,7 @@
     </div>
   </div>
 
-  <!-- Add / Edit Block Modal (Enhanced with Formatting & Tables Toolbar) -->
+  <!-- Add / Edit Block Modal -->
   <div id="blockModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-zinc-900 border border-zinc-700 rounded-xl max-w-2xl w-full p-6 shadow-2xl space-y-4">
       <div class="flex justify-between items-center border-b border-zinc-800 pb-2">
@@ -304,7 +291,6 @@
         <button onclick="closeBlockModal()" class="text-zinc-400 hover:text-white text-xl">&times;</button>
       </div>
 
-      <!-- Formatting & Block Construction Toolbar -->
       <div class="flex flex-wrap items-center gap-1.5 bg-zinc-950 p-2 rounded-lg border border-zinc-800 text-xs">
         <span class="text-zinc-400 font-medium mr-1">Formatting:</span>
         <button type="button" onclick="insertModalSnippet('**', '**')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded font-bold border border-zinc-700">**Bold**</button>
@@ -324,7 +310,7 @@
       </div>
 
       <div>
-        <textarea id="blockTextInput" rows="9" placeholder="Type or paste your script content here. Use the toolbar above for markdown headers, bold, tables, and cues..." class="w-full bg-zinc-950 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-100 font-mono focus:outline-none focus:border-indigo-500"></textarea>
+        <textarea id="blockTextInput" rows="9" placeholder="Type or paste your script content here..." class="w-full bg-zinc-950 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-100 font-mono focus:outline-none focus:border-indigo-500"></textarea>
       </div>
 
       <div class="flex justify-end gap-2 pt-2 border-t border-zinc-800">
@@ -337,6 +323,7 @@
   <script>
     let appState = {
       activeShowId: "show_morning",
+      activeHourIndex: 0,
       fontSize: 19,
       globalFont: "Inter, sans-serif",
       layoutMode: "standard",
@@ -347,9 +334,15 @@
         {
           id: "show_morning",
           title: "Live From Studio 1",
-          targetHours: 1,
-          blocks: [
-            { id: 1, rawText: "[INTRO BED] Good morning Stanley and outer islands!\n\n| Time | Segment / Track |\n|---|---|\n| 08:05 | Local News & Weather |\n| 08:15 | 80s Retro Anthem |", blackout: false }
+          hours: [
+            {
+              title: "Hour 1",
+              blocks: [
+                { id: 1, rawText: "[INTRO BED] Good morning Stanley and outer islands!\n\n| Time | Segment / Track |\n|---|---|\n| 08:05 | Local News & Weather |\n| 08:15 | 80s Retro Anthem |", blackout: false }
+              ]
+            },
+            { title: "Hour 2", blocks: [] },
+            { title: "Hour 3", blocks: [] }
           ]
         }
       ]
@@ -375,7 +368,41 @@
     const FIREBASE_ENDPOINT = "https://script-buddy-v1-default-rtdb.firebaseio.com/broadcast.json";
     const WPM = 145;
 
-    // Legacy Migration
+    // Automated Data & Structure Migration
+    function migrateStateStructure(stateObj) {
+      if (!stateObj || !Array.isArray(stateObj.shows)) return false;
+      let migrated = false;
+      stateObj.shows.forEach(show => {
+        // If show uses legacy flat blocks array instead of multi-hour structure
+        if (!Array.isArray(show.hours)) {
+          let existingBlocks = Array.isArray(show.blocks) ? show.blocks : [];
+          show.hours = [
+            { title: "Hour 1", blocks: existingBlocks },
+            { title: "Hour 2", blocks: [] },
+            { title: "Hour 3", blocks: [] }
+          ];
+          delete show.blocks;
+          delete show.targetHours;
+          migrated = true;
+        }
+        show.hours.forEach(hr => {
+          if (!Array.isArray(hr.blocks)) hr.blocks = [];
+          hr.blocks.forEach(block => {
+            if (block.rawText === undefined && block.html !== undefined) {
+              block.rawText = htmlToCleanText(block.html);
+              delete block.html;
+              migrated = true;
+            } else if (block.rawText === undefined) {
+              block.rawText = "";
+              migrated = true;
+            }
+          });
+        });
+      });
+      if (stateObj.activeHourIndex === undefined) stateObj.activeHourIndex = 0;
+      return migrated;
+    }
+
     function htmlToCleanText(htmlStr) {
       if (!htmlStr) return "";
       const tmp = document.createElement("div");
@@ -383,25 +410,6 @@
       tmp.innerHTML = normalized;
       tmp.querySelectorAll(".meta-badge").forEach(el => el.remove());
       return (tmp.textContent || tmp.innerText || "").trim();
-    }
-
-    function migrateLegacyState(stateObj) {
-      if (!stateObj || !Array.isArray(stateObj.shows)) return false;
-      let migrated = false;
-      stateObj.shows.forEach(show => {
-        if (!Array.isArray(show.blocks)) show.blocks = [];
-        show.blocks.forEach(block => {
-          if (block.rawText === undefined && block.html !== undefined) {
-            block.rawText = htmlToCleanText(block.html);
-            delete block.html;
-            migrated = true;
-          } else if (block.rawText === undefined) {
-            block.rawText = "";
-            migrated = true;
-          }
-        });
-      });
-      return migrated;
     }
 
     auth.onAuthStateChanged((user) => {
@@ -452,6 +460,30 @@
 
     function switchLayoutMode(mode) {
       appState.layoutMode = mode;
+      saveAndSync();
+      render();
+    }
+
+    function switchShow(showId) {
+      appState.activeShowId = showId;
+      appState.activeHourIndex = 0;
+      saveAndSync();
+      render();
+    }
+
+    function switchHour(hourIdx) {
+      appState.activeHourIndex = hourIdx;
+      saveAndSync();
+      render();
+    }
+
+    function addHourSubgroup() {
+      const show = appState.shows.find(s => s.id === appState.activeShowId);
+      if (!show) return;
+      if (!show.hours) show.hours = [];
+      const nextNum = show.hours.length + 1;
+      show.hours.push({ title: `Hour ${nextNum}`, blocks: [] });
+      appState.activeHourIndex = show.hours.length - 1;
       saveAndSync();
       render();
     }
@@ -582,8 +614,9 @@
 
     function toggleBlackout(id) {
       const show = appState.shows.find(s => s.id === appState.activeShowId);
-      if (!show) return;
-      const b = show.blocks.find(x => x.id === id);
+      if (!show || !show.hours[appState.activeHourIndex]) return;
+      const hour = show.hours[appState.activeHourIndex];
+      const b = hour.blocks.find(x => x.id === id);
       if (b) {
         b.blackout = !b.blackout;
         saveAndSync();
@@ -689,7 +722,8 @@
       appState.shows.forEach(show => {
         const opt = document.createElement("option");
         opt.value = show.id;
-        opt.textContent = `${show.title} (${show.targetHours}h)`;
+        const totalHrs = show.hours ? show.hours.length : 1;
+        opt.textContent = `${show.title} (${totalHrs}h)`;
         if (show.id === appState.activeShowId) opt.selected = true;
         selector.appendChild(opt);
       });
@@ -697,7 +731,42 @@
       const currentShow = appState.shows.find(s => s.id === appState.activeShowId) || appState.shows[0];
       if (!currentShow) return;
       appState.activeShowId = currentShow.id;
-      document.getElementById("timeTarget").textContent = currentShow.targetHours + "h";
+      if (!currentShow.hours || currentShow.hours.length === 0) {
+        currentShow.hours = [{ title: "Hour 1", blocks: [] }];
+      }
+      if (appState.activeHourIndex >= currentShow.hours.length) {
+        appState.activeHourIndex = 0;
+      }
+      const currentHour = currentShow.hours[appState.activeHourIndex];
+
+      document.getElementById("timeTarget").textContent = `${currentShow.hours.length} hr`;
+
+      // Render Hour Subgroup Tabs
+      const tabsContainer = document.getElementById("hourTabsContainer");
+      tabsContainer.innerHTML = "";
+      currentShow.hours.forEach((hr, idx) => {
+        const isSelected = idx === appState.activeHourIndex;
+        // Calculate words for this hour subgroup
+        let hrWords = 0;
+        (hr.blocks || []).forEach(b => {
+          if (!b.blackout) {
+            const raw = b.rawText !== undefined ? b.rawText : htmlToCleanText(b.html || "");
+            const clean = stripHtmlEntities(raw.replace(/\[[^\]]+\]/g, ''));
+            hrWords += clean ? clean.split(/\s+/).length : 0;
+          }
+        });
+        const hrSecs = Math.round((hrWords / WPM) * 60);
+
+        const tabBtn = document.createElement("button");
+        tabBtn.onclick = () => switchHour(idx);
+        tabBtn.className = `px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0 flex items-center gap-2 border transition-all ${
+          isSelected 
+            ? 'bg-indigo-600 border-indigo-500 text-white shadow-md' 
+            : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+        }`;
+        tabBtn.innerHTML = `<span>${escapeHtml(hr.title)}</span> <span class="text-[10px] opacity-80 mono">(${formatTime(hrSecs)})</span>`;
+        tabsContainer.appendChild(tabBtn);
+      });
 
       const container = document.getElementById("blocksContainer");
       container.className = layoutMode === "compact" ? "space-y-2" : "space-y-4";
@@ -705,14 +774,14 @@
 
       let totalWords = 0;
 
-      if (!currentShow.blocks || currentShow.blocks.length === 0) {
+      if (!currentHour.blocks || currentHour.blocks.length === 0) {
         container.innerHTML = `
           <div class="text-center py-12 border border-dashed border-zinc-800 rounded-xl text-zinc-500 text-sm">
-            No blocks in <strong>${escapeHtml(currentShow.title)}</strong> yet. Tap <strong>+ Block</strong> to add content.
+            No blocks in <strong>${escapeHtml(currentHour.title)}</strong> of <strong>${escapeHtml(currentShow.title)}</strong> yet. Tap <strong>+ Block</strong> to add content.
           </div>
         `;
       } else {
-        currentShow.blocks.forEach((block, idx) => {
+        currentHour.blocks.forEach((block, idx) => {
           const raw = block.rawText !== undefined ? block.rawText : htmlToCleanText(block.html || "");
           const cleanText = stripHtmlEntities(raw.replace(/\[[^\]]+\]/g, ''));
           const words = cleanText ? cleanText.split(/\s+/).length : 0;
@@ -738,8 +807,8 @@
             </div>
             ${layoutMode !== 'compact' ? `
               <div class="mt-2.5 pt-2 border-t border-zinc-800/60 flex items-center justify-between text-[11px] mono text-zinc-500">
-                <span>BLOCK #${idx + 1} &bull; EST. <strong class="text-zinc-400">${blockSecs}s</strong> (${words}w)</span>
-                <span class="text-zinc-400">Highlight/Strike Ready</span>
+                <span>BLOCK #${idx + 1} &bull; EST. <strong class="text-zinc-400">${formatTime(blockSecs)}</strong> (${words}w)</span>
+                <span class="text-zinc-400">${escapeHtml(currentHour.title)}</span>
               </div>
             ` : ''}
           `;
@@ -747,10 +816,21 @@
         });
       }
 
-      const totalSecs = Math.round((totalWords / WPM) * 60);
+      // Calculate total words across ALL hours in show for overall stats
+      let showTotalWords = 0;
+      currentShow.hours.forEach(hr => {
+        (hr.blocks || []).forEach(b => {
+          if (!b.blackout) {
+            const raw = b.rawText !== undefined ? b.rawText : htmlToCleanText(b.html || "");
+            const clean = stripHtmlEntities(raw.replace(/\[[^\]]+\]/g, ''));
+            showTotalWords += clean ? clean.split(/\s+/).length : 0;
+          }
+        });
+      });
+      const totalSecs = Math.round((showTotalWords / WPM) * 60);
       document.getElementById("timeTotal").textContent = formatTime(totalSecs);
 
-      const targetSecs = currentShow.targetHours * 3600;
+      const targetSecs = currentShow.hours.length * 3600;
       const diffSecs = totalSecs - targetSecs;
       const deltaEl = document.getElementById("timeDelta");
       
@@ -758,26 +838,28 @@
         deltaEl.textContent = "On Pace";
         deltaEl.className = "text-emerald-400 font-bold";
       } else if (diffSecs > 0) {
-        deltaEl.textContent = `+${Math.round(diffSecs / 60)}m Over`;
+        deltaEl.textContent = `+${formatTime(Math.abs(diffSecs))} Over`;
         deltaEl.className = "text-amber-400 font-bold";
       } else {
-        deltaEl.textContent = `${Math.round(Math.abs(diffSecs) / 60)}m Under`;
+        deltaEl.textContent = `${formatTime(Math.abs(diffSecs))} Under`;
         deltaEl.className = "text-cyan-400 font-bold";
       }
     }
 
+    // Format time representation: displays hours if >= 3600s, otherwise minutes & seconds
     function formatTime(sec) {
+      if (isNaN(sec) || sec < 0) sec = 0;
       const h = Math.floor(sec / 3600);
       const m = Math.floor((sec % 3600) / 60);
       const s = sec % 60;
-      if (h > 0) return `${h}h ${m}m`;
-      return `${m}:${s < 10 ? "0" : ""}${s}`;
-    }
-
-    function switchShow(showId) {
-      appState.activeShowId = showId;
-      saveAndSync();
-      render();
+      
+      if (h > 0) {
+        return `${h}h ${m}m`;
+      }
+      if (m > 0) {
+        return `${m}m ${s < 10 ? "0" : ""}${s}s`;
+      }
+      return `${s}s`;
     }
 
     function openShowManagerModal() {
@@ -794,13 +876,14 @@
       list.innerHTML = "";
       appState.shows.forEach(show => {
         const isActive = show.id === appState.activeShowId;
+        const totalHrs = show.hours ? show.hours.length : 1;
         const row = document.createElement("div");
         row.className = `p-3.5 rounded-xl border ${isActive ? 'bg-indigo-950/20 border-indigo-500/50' : 'bg-zinc-950 border-zinc-800'} flex flex-wrap sm:flex-nowrap items-center justify-between gap-3`;
         row.innerHTML = `
           <div class="flex-1 min-w-[200px] space-y-1.5">
-            <input type="text" value="${escapeHtml(show.title)}" onchange="updateShowMeta('${show.id}', 'title', this.value)" class="bg-zinc-900 border border-zinc-700 rounded px-2.5 py-1 text-sm font-bold text-zinc-100 w-full focus:outline-none focus:border-indigo-500" />
+            <input type="text" value="${escapeHtml(show.title)}" onchange="updateShowTitle('${show.id}', this.value)" class="bg-zinc-900 border border-zinc-700 rounded px-2.5 py-1 text-sm font-bold text-zinc-100 w-full focus:outline-none focus:border-indigo-500" />
             <div class="flex items-center gap-3 text-xs text-zinc-400">
-              <label class="flex items-center gap-1">Hours: <input type="number" step="0.5" min="0.5" value="${show.targetHours}" onchange="updateShowMeta('${show.id}', 'targetHours', this.value)" class="w-16 bg-zinc-900 border border-zinc-700 rounded px-2 py-0.5 text-zinc-200 mono" /></label>
+              <span>Duration: <strong class="text-indigo-400">${totalHrs} hr${totalHrs > 1 ? 's' : ''}</strong></span>
               ${isActive ? '<span class="text-emerald-400 font-semibold">&bull; Active</span>' : ''}
             </div>
           </div>
@@ -818,41 +901,51 @@
       const nameInput = document.getElementById("mgrNewShowName");
       const hoursInput = document.getElementById("mgrNewShowHours");
       const name = nameInput.value.trim();
-      const hours = parseFloat(hoursInput.value) || 1;
+      const numHours = Math.max(1, parseInt(hoursInput.value) || 3);
       if (!name) return;
 
       const newId = "show_" + Date.now();
-      appState.shows.push({
-        id: newId, title: name, targetHours: hours,
-        blocks: [{ id: Date.now(), rawText: "[INTRO] Welcome to " + name, blackout: false }]
-      });
+      const hoursArr = [];
+      for (let i = 1; i <= numHours; i++) {
+        hoursArr.push({
+          title: `Hour ${i}`,
+          blocks: i === 1 ? [{ id: Date.now(), rawText: "[INTRO] Welcome to " + name, blackout: false }] : []
+        });
+      }
+
+      appState.shows.push({ id: newId, title: name, hours: hoursArr });
       appState.activeShowId = newId;
+      appState.activeHourIndex = 0;
       nameInput.value = "";
       saveAndSync();
       render();
       renderShowManagerList();
     }
 
-    function updateShowMeta(showId, field, value) {
+    function updateShowTitle(showId, val) {
       const show = appState.shows.find(s => s.id === showId);
-      if (!show) return;
-      if (field === "title") show.title = value.trim();
-      else if (field === "targetHours") show.targetHours = Math.max(0.5, parseFloat(value) || 1);
-      saveAndSync();
-      render();
+      if (show) {
+        show.title = val.trim();
+        saveAndSync();
+        render();
+      }
     }
 
     function duplicateShow(showId) {
       const source = appState.shows.find(s => s.id === showId);
       if (!source) return;
-      const clonedBlocks = (source.blocks || []).map((b, i) => ({
-        id: Date.now() + i,
-        rawText: b.rawText !== undefined ? b.rawText : htmlToCleanText(b.html || ""),
-        blackout: false
+      const clonedHours = source.hours.map(hr => ({
+        title: hr.title,
+        blocks: (hr.blocks || []).map((b, i) => ({
+          id: Date.now() + i + Math.floor(Math.random() * 100),
+          rawText: b.rawText !== undefined ? b.rawText : htmlToCleanText(b.html || ""),
+          blackout: false
+        }))
       }));
       const newId = "show_" + (Date.now() + 99);
-      appState.shows.push({ id: newId, title: `${source.title} (Copy)`, targetHours: source.targetHours, blocks: clonedBlocks });
+      appState.shows.push({ id: newId, title: `${source.title} (Copy)`, hours: clonedHours });
       appState.activeShowId = newId;
+      appState.activeHourIndex = 0;
       saveAndSync();
       render();
       renderShowManagerList();
@@ -861,7 +954,10 @@
     function deleteShow(showId) {
       if (appState.shows.length <= 1) { alert("Must keep at least one show."); return; }
       appState.shows = appState.shows.filter(s => s.id !== showId);
-      if (appState.activeShowId === showId) appState.activeShowId = appState.shows[0].id;
+      if (appState.activeShowId === showId) {
+        appState.activeShowId = appState.shows[0].id;
+        appState.activeHourIndex = 0;
+      }
       saveAndSync();
       render();
       renderShowManagerList();
@@ -901,9 +997,10 @@
       const rawText = researchCache[cacheIndex];
       if (!rawText) return;
       const show = appState.shows.find(s => s.id === appState.activeShowId);
-      if (!show) return;
-      if (!show.blocks) show.blocks = [];
-      show.blocks.push({ id: Date.now() + Math.floor(Math.random() * 1000), rawText, blackout: false });
+      if (!show || !show.hours[appState.activeHourIndex]) return;
+      const hour = show.hours[appState.activeHourIndex];
+      if (!hour.blocks) hour.blocks = [];
+      hour.blocks.push({ id: Date.now() + Math.floor(Math.random() * 1000), rawText, blackout: false });
       saveAndSync();
       render();
     }
@@ -936,7 +1033,7 @@
       container.innerHTML = `
         <div class="p-4 rounded-xl bg-zinc-900 border border-zinc-800 space-y-3">
           <p class="text-zinc-200 text-sm">${escapeHtml(sized)}</p>
-          <button onclick="injectResearchBlock(${cacheId})" class="w-full py-2 rounded bg-emerald-700 text-white text-xs font-semibold">+ Insert into Active Show</button>
+          <button onclick="injectResearchBlock(${cacheId})" class="w-full py-2 rounded bg-emerald-700 text-white text-xs font-semibold">+ Insert into Active Hour</button>
         </div>
       `;
     }
@@ -1042,11 +1139,12 @@
 
     function moveBlock(id, direction) {
       const show = appState.shows.find(s => s.id === appState.activeShowId);
-      if (!show) return;
-      const idx = show.blocks.findIndex(b => b.id === id);
-      if ((idx + direction >= 0) && (idx + direction < show.blocks.length)) {
-        const item = show.blocks.splice(idx, 1)[0];
-        show.blocks.splice(idx + direction, 0, item);
+      if (!show || !show.hours[appState.activeHourIndex]) return;
+      const hour = show.hours[appState.activeHourIndex];
+      const idx = hour.blocks.findIndex(b => b.id === id);
+      if ((idx + direction >= 0) && (idx + direction < hour.blocks.length)) {
+        const item = hour.blocks.splice(idx, 1)[0];
+        hour.blocks.splice(idx + direction, 0, item);
         saveAndSync();
         render();
       }
@@ -1054,8 +1152,9 @@
 
     function deleteBlock(id) {
       const show = appState.shows.find(s => s.id === appState.activeShowId);
-      if (!show) return;
-      show.blocks = show.blocks.filter(b => b.id !== id);
+      if (!show || !show.hours[appState.activeHourIndex]) return;
+      const hour = show.hours[appState.activeHourIndex];
+      hour.blocks = hour.blocks.filter(b => b.id !== id);
       saveAndSync();
       render();
     }
@@ -1066,7 +1165,8 @@
       const textInput = document.getElementById("blockTextInput");
       if (mode === 'edit' && id !== null) {
         const show = appState.shows.find(s => s.id === appState.activeShowId);
-        const block = show ? show.blocks.find(b => b.id === id) : null;
+        const hour = show ? show.hours[appState.activeHourIndex] : null;
+        const block = hour ? hour.blocks.find(b => b.id === id) : null;
         if (block) {
           textInput.value = block.rawText !== undefined ? block.rawText : htmlToCleanText(block.html || "");
         } else {
@@ -1103,32 +1203,22 @@
       const rawText = document.getElementById("blockTextInput").value;
       if (!rawText.trim()) return;
       const show = appState.shows.find(s => s.id === appState.activeShowId);
-      if (!show) return;
-      if (!show.blocks) show.blocks = [];
+      if (!show || !show.hours[appState.activeHourIndex]) return;
+      const hour = show.hours[appState.activeHourIndex];
+      if (!hour.blocks) hour.blocks = [];
 
       if (editingBlockId !== null) {
-        const block = show.blocks.find(b => b.id === editingBlockId);
+        const block = hour.blocks.find(b => b.id === editingBlockId);
         if (block) {
           block.rawText = rawText;
           delete block.html;
         }
       } else {
-        show.blocks.push({ id: Date.now(), rawText, blackout: false });
+        hour.blocks.push({ id: Date.now(), rawText, blackout: false });
       }
       closeBlockModal();
       saveAndSync();
       render();
-    }
-
-    function toggleScratchpad() {
-      document.getElementById("researchDrawer").classList.add("translate-x-full");
-      document.getElementById("scratchpadDrawer").classList.toggle("translate-x-full");
-    }
-    function saveScratchpad() {
-      localStorage.setItem("onair_scratchpad", document.getElementById("scratchpadText").value);
-    }
-    if (localStorage.getItem("onair_scratchpad")) {
-      document.getElementById("scratchpadText").value = localStorage.getItem("onair_scratchpad");
     }
 
     async function saveAndSync() {
@@ -1186,7 +1276,7 @@
       }
 
       if (loadedData) {
-        const didMigrate = migrateLegacyState(loadedData);
+        const didMigrate = migrateStateStructure(loadedData);
         appState = loadedData;
         if (didMigrate) {
           saveAndSync();

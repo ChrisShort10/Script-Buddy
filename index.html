@@ -1251,13 +1251,32 @@
     }
 
     async function initLoad() {
-      let loaded = localStorage.getItem("onair_app_state");
-      if (loaded) {
-        appState = JSON.parse(loaded);
-        migrateStateStructure(appState);
+  let loadedData = null;
+  if (FIREBASE_ENDPOINT) {
+    try {
+      const res = await fetch(FIREBASE_ENDPOINT + "?t=" + Date.now()); // Busts mobile browser cache
+      const data = await res.json();
+      if (data && data.shows && data.shows.length > 0) {
+        loadedData = data;
+        localStorage.setItem("onair_app_state", JSON.stringify(loadedData));
       }
-      render();
+    } catch (e) {
+      console.warn("Cloud fetch failed, falling back to local cache:", e);
     }
+  }
+
+  if (!loadedData) {
+    const saved = localStorage.getItem("onair_app_state");
+    if (saved) loadedData = JSON.parse(saved);
+  }
+
+  if (loadedData) {
+    const didMigrate = migrateStateStructure(loadedData);
+    appState = loadedData;
+    if (didMigrate) saveAndSync();
+  }
+  render();
+}
   </script>
 </body>
 </html>

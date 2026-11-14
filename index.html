@@ -2,7 +2,7 @@
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>OnAir Script Studio Pro</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Firebase App & Auth SDKs -->
@@ -37,6 +37,12 @@
       padding: 2px 6px; border-radius: 4px; margin-top: 6px;
     }
 
+    /* Respect full line breaks & whitespaces */
+    .script-text-area {
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
     #selectionToolbar {
       position: absolute; display: none; z-index: 100;
       background: #18181b; border: 1px solid #3f3f46; border-radius: 8px;
@@ -49,7 +55,7 @@
 
   <!-- Login Gate Overlay -->
   <div id="loginOverlay" class="fixed inset-0 z-50 bg-zinc-950 flex items-center justify-center p-4 hidden">
-    <div class="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-8 shadow-2xl space-y-6">
+    <div class="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-6 sm:p-8 shadow-2xl space-y-6">
       <div class="text-center space-y-2">
         <div class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 font-bold text-xl mb-1">🎙️</div>
         <h1 class="text-xl font-bold text-white">OnAir Script Studio</h1>
@@ -84,81 +90,104 @@
   </div>
 
   <!-- Top SaaS Control Bar -->
-  <header class="sticky top-0 z-30 bg-zinc-950/95 backdrop-blur border-b border-zinc-800 px-5 py-3 flex flex-wrap items-center justify-between gap-4">
-    <div class="flex items-center gap-2.5">
-      <span class="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-      <select id="showSelector" onchange="switchShow(this.value)" class="bg-zinc-900 border border-zinc-700 text-zinc-100 font-bold px-3 py-1.5 rounded-lg text-sm focus:outline-none focus:border-indigo-500">
+  <header class="sticky top-0 z-30 bg-zinc-950/95 backdrop-blur border-b border-zinc-800 px-3 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-2">
+      <span class="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+      <select id="showSelector" onchange="switchShow(this.value)" class="bg-zinc-900 border border-zinc-700 text-zinc-100 font-bold px-2.5 py-1.5 rounded-lg text-xs sm:text-sm focus:outline-none focus:border-indigo-500 max-w-[150px] sm:max-w-xs">
         <!-- Populated dynamically -->
       </select>
-      <button onclick="openShowManagerModal()" class="px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 font-medium">Manage Shows</button>
-      <span id="syncBadge" class="text-[11px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 mono">LOCAL</span>
+      <button onclick="openShowManagerModal()" class="px-2 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-[11px] sm:text-xs text-zinc-300 font-medium">Shows</button>
+      <span id="syncBadge" class="hidden sm:inline-block text-[11px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 mono">LOCAL</span>
     </div>
 
     <!-- Backtiming & Live Stats Bar -->
-    <div class="flex items-center gap-4 text-xs mono bg-zinc-900/80 border border-zinc-800 px-3 py-1.5 rounded-lg">
-      <div><span class="text-zinc-500">SCRIPT:</span> <span id="timeTotal" class="text-zinc-200 font-bold">0:00</span></div>
-      <div><span class="text-zinc-500">TARGET:</span> <span id="timeTarget" class="text-indigo-400 font-bold">1h</span></div>
-      <div><span class="text-zinc-500">DELTA:</span> <span id="timeDelta" class="text-emerald-400 font-bold">On Pace</span></div>
-      <div class="hidden lg:block text-zinc-400">| CLOCK: <span id="liveClock" class="text-zinc-200 font-bold">00:00:00</span></div>
+    <div class="flex items-center gap-2 sm:gap-4 text-[11px] sm:text-xs mono bg-zinc-900/80 border border-zinc-800 px-2.5 py-1.5 rounded-lg">
+      <div><span class="text-zinc-500">TOT:</span> <span id="timeTotal" class="text-zinc-200 font-bold">0:00</span></div>
+      <div><span class="text-zinc-500">TGT:</span> <span id="timeTarget" class="text-indigo-400 font-bold">1h</span></div>
+      <div><span class="text-zinc-500">DLT:</span> <span id="timeDelta" class="text-emerald-400 font-bold">On Pace</span></div>
     </div>
 
     <!-- Pro Tools & Actions -->
-    <div class="flex items-center gap-2">
-      <button onclick="toggleResearchDock()" class="px-3 py-1.5 rounded bg-emerald-950/70 hover:bg-emerald-900/80 border border-emerald-700/70 text-xs text-emerald-300 font-semibold">🌐 Research & News</button>
-      <button onclick="toggleScratchpad()" class="px-3 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 font-medium">Scratchpad</button>
-      <button onclick="window.print()" class="px-3 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 font-medium hidden sm:inline-block">Print PDF</button>
-      <button onclick="openBlockModal('add')" class="px-3.5 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-sm">+ Add Block</button>
-      <button onclick="handleLogout()" class="px-2.5 py-1.5 rounded bg-zinc-900 hover:bg-red-950 border border-zinc-700 hover:border-red-800 text-xs text-zinc-400 hover:text-red-300 transition-colors" title="Sign Out">Sign Out</button>
+    <div class="flex items-center gap-1.5 sm:gap-2">
+      <!-- Font Size Stepper -->
+      <div class="hidden md:flex items-center bg-zinc-900 border border-zinc-700 rounded-lg p-0.5 text-xs">
+        <button onclick="adjustFontSize(-1)" class="px-2 py-1 hover:bg-zinc-800 text-zinc-300 rounded font-bold" title="Decrease Font Size">A-</button>
+        <span id="fontSizeIndicator" class="px-2 text-zinc-400 mono text-[11px]">19px</span>
+        <button onclick="adjustFontSize(1)" class="px-2 py-1 hover:bg-zinc-800 text-zinc-300 rounded font-bold" title="Increase Font Size">A+</button>
+      </div>
+
+      <!-- Layout / View Mode Selector -->
+      <select id="layoutModeSelector" onchange="switchLayoutMode(this.value)" class="bg-zinc-900 border border-zinc-700 text-zinc-300 text-xs px-2 py-1.5 rounded-lg focus:outline-none focus:border-indigo-500">
+        <option value="standard">Standard View</option>
+        <option value="teleprompter">Prompter Mode</option>
+        <option value="compact">Compact Grid</option>
+      </select>
+
+      <button onclick="toggleCalendarModal()" class="px-2.5 py-1.5 rounded bg-indigo-950/70 hover:bg-indigo-900/80 border border-indigo-700/70 text-xs text-indigo-300 font-semibold" title="Show Calendar">📅 Calendar</button>
+      <button onclick="toggleResearchDock()" class="px-2.5 py-1.5 rounded bg-emerald-950/70 hover:bg-emerald-900/80 border border-emerald-700/70 text-xs text-emerald-300 font-semibold">🌐 Research</button>
+      <button onclick="toggleScratchpad()" class="hidden sm:inline-block px-2.5 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 font-medium">Scratch</button>
+      <button onclick="openBlockModal('add')" class="px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-sm">+ Block</button>
+      <button onclick="handleLogout()" class="px-2 py-1.5 rounded bg-zinc-900 hover:bg-red-950 border border-zinc-700 hover:border-red-800 text-xs text-zinc-400 hover:text-red-300" title="Sign Out">✕</button>
     </div>
   </header>
 
   <!-- Main Content Workspace -->
-  <main class="flex-1 max-w-4xl w-full mx-auto px-6 py-8 space-y-6">
+  <main id="mainWorkspace" class="flex-1 max-w-4xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
     <div class="bg-zinc-900/60 border border-zinc-800 p-2.5 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs">
-      <div class="text-zinc-400 font-medium">Quick Insert Cue:</div>
+      <div class="text-zinc-400 font-medium">Quick Cue:</div>
       <div class="flex flex-wrap gap-1.5">
         <button onclick="insertCueToModal('[INTRO]')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[INTRO]</button>
         <button onclick="insertCueToModal('[SFX: Bed]')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[SFX: Bed]</button>
-        <button onclick="insertCueToModal('[COMPETITION / CALLER]')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-amber-300 rounded mono">[COMPETITION / CALLER]</button>
+        <button onclick="insertCueToModal('[CALLER / COMP]')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-amber-300 rounded mono">[CALLER]</button>
         <button onclick="insertCueToModal('[AD BREAK]')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[AD BREAK]</button>
-        <button onclick="insertCueToModal('[TIME CHECK]')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[TIME CHECK]</button>
         <button onclick="insertCueToModal('[OUTRO]')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded mono">[OUTRO]</button>
       </div>
-      <div class="text-zinc-500 text-[11px] hidden md:block">Highlight words for UK TTS, Lookup, or styling &bull; Blackout to discard block</div>
+      <div class="text-zinc-500 text-[11px] hidden md:block">Full line breaks respected &bull; Blackout clears block</div>
     </div>
 
     <div id="blocksContainer" class="space-y-4"></div>
   </main>
 
   <!-- Research Drawer -->
-  <div id="researchDrawer" class="fixed right-0 top-0 h-full w-full sm:w-[440px] bg-zinc-950 border-l border-zinc-800 z-40 p-5 shadow-2xl transform translate-x-full transition-transform duration-200 flex flex-col">
+  <div id="researchDrawer" class="fixed right-0 top-0 h-full w-full sm:w-[460px] bg-zinc-950 border-l border-zinc-800 z-40 p-4 sm:p-5 shadow-2xl transform translate-x-full transition-transform duration-200 flex flex-col">
     <div class="flex justify-between items-center pb-3 border-b border-zinc-800">
       <div>
         <h3 class="font-bold text-sm text-zinc-100 flex items-center gap-2">🌐 Studio Research & Live News</h3>
-        <p class="text-[11px] text-zinc-500">Pull facts, song info, Wiki bios, or headlines straight into blocks</p>
+        <p class="text-[11px] text-zinc-500">Choose story depth & pull straight into script blocks</p>
       </div>
       <button onclick="toggleResearchDock()" class="text-zinc-400 hover:text-white text-xl px-2">&times;</button>
     </div>
 
+    <!-- Story Detail Depth Selector -->
+    <div class="mt-3 flex items-center justify-between gap-2 bg-zinc-900/80 border border-zinc-800 px-3 py-2 rounded-lg text-xs">
+      <span class="text-zinc-400 font-medium">Include Length:</span>
+      <select id="storyLengthMode" class="bg-zinc-950 border border-zinc-700 text-emerald-300 font-semibold px-2.5 py-1 rounded text-xs focus:outline-none focus:border-emerald-500">
+        <option value="brief">Headline / Brief (1–2 sentences)</option>
+        <option value="standard" selected>Standard Link (3–4 sentences)</option>
+        <option value="full">Full Story / Deep Dive</option>
+      </select>
+    </div>
+
+    <!-- Plugin Mode Tabs -->
     <div class="grid grid-cols-4 gap-1.5 my-3 bg-zinc-900 p-1 rounded-lg border border-zinc-800 text-xs font-semibold">
-      <button id="tab_ai" onclick="switchResearchTab('ai')" class="py-1.5 rounded bg-indigo-600 text-white">AI Overview</button>
-      <button id="tab_song" onclick="switchResearchTab('song')" class="py-1.5 rounded text-zinc-400 hover:text-zinc-200">Song Info</button>
-      <button id="tab_wiki" onclick="switchResearchTab('wiki')" class="py-1.5 rounded text-zinc-400 hover:text-zinc-200">Wikipedia</button>
-      <button id="tab_news" onclick="switchResearchTab('news')" class="py-1.5 rounded text-zinc-400 hover:text-zinc-200">Live News</button>
+      <button id="tab_ai" onclick="switchResearchTab('ai')" class="py-1.5 rounded bg-indigo-600 text-white">AI / Web</button>
+      <button id="tab_song" onclick="switchResearchTab('song')" class="py-1.5 rounded text-zinc-400 hover:text-zinc-200">Songs</button>
+      <button id="tab_wiki" onclick="switchResearchTab('wiki')" class="py-1.5 rounded text-zinc-400 hover:text-zinc-200">Wiki</button>
+      <button id="tab_news" onclick="switchResearchTab('news')" class="py-1.5 rounded text-zinc-400 hover:text-zinc-200">News</button>
     </div>
 
     <div id="researchSearchBox" class="space-y-2 mb-3">
       <div class="flex gap-2">
-        <input id="researchQueryInput" type="text" onkeydown="if(event.key==='Enter') runResearchPlugin()" placeholder="Search topic, band, or track..." class="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
+        <input id="researchQueryInput" type="text" onkeydown="if(event.key==='Enter') runResearchPlugin()" placeholder="Search topic or artist..." class="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
         <button onclick="runResearchPlugin()" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold">Search</button>
       </div>
     </div>
 
     <div id="newsCategoryBox" class="hidden space-y-2 mb-3">
       <div class="flex gap-1.5">
-        <button onclick="loadNewsFeed('general')" id="news_btn_general" class="flex-1 py-1.5 rounded bg-zinc-800 border border-zinc-700 text-xs text-zinc-200 font-semibold">World News</button>
-        <button onclick="loadNewsFeed('showbiz')" id="news_btn_showbiz" class="flex-1 py-1.5 rounded bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 hover:text-zinc-200">Showbiz & TV</button>
-        <button onclick="loadNewsFeed('music')" id="news_btn_music" class="flex-1 py-1.5 rounded bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 hover:text-zinc-200">Music News</button>
+        <button onclick="loadNewsFeed('general')" id="news_btn_general" class="flex-1 py-1.5 rounded bg-zinc-800 border border-zinc-700 text-xs text-zinc-200 font-semibold">World</button>
+        <button onclick="loadNewsFeed('showbiz')" id="news_btn_showbiz" class="flex-1 py-1.5 rounded bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 hover:text-zinc-200">Showbiz</button>
+        <button onclick="loadNewsFeed('music')" id="news_btn_music" class="flex-1 py-1.5 rounded bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 hover:text-zinc-200">Music</button>
       </div>
     </div>
 
@@ -173,7 +202,44 @@
       <h3 class="font-bold text-sm text-zinc-200">Presenter Scratchpad & Notes</h3>
       <button onclick="toggleScratchpad()" class="text-zinc-400 hover:text-white text-lg">&times;</button>
     </div>
-    <textarea id="scratchpadText" oninput="saveScratchpad()" placeholder="Jot down caller names, competition winners, contest codes..." class="w-full flex-1 bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500 font-mono resize-none"></textarea>
+    <textarea id="scratchpadText" oninput="saveScratchpad()" placeholder="Jot down caller names, contest codes..." class="w-full flex-1 bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm text-zinc-200 focus:outline-none focus:border-indigo-500 font-mono resize-none"></textarea>
+  </div>
+
+  <!-- Studio Show Calendar Modal -->
+  <div id="calendarModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-zinc-900 border border-zinc-700 rounded-xl max-w-2xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] flex flex-col">
+      <div class="flex justify-between items-center border-b border-zinc-800 pb-3">
+        <div>
+          <h2 class="text-lg font-bold text-white">📅 Studio Show Calendar & Schedule</h2>
+          <p class="text-xs text-zinc-400">Track special broadcasts, guest interviews, and recurring features</p>
+        </div>
+        <button onclick="toggleCalendarModal()" class="text-zinc-400 hover:text-white text-xl">&times;</button>
+      </div>
+
+      <div class="bg-zinc-950 border border-zinc-800 p-3.5 rounded-xl space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-[11px] text-zinc-400 mb-1">Event / Show Title</label>
+            <input id="calEventTitle" type="text" placeholder="e.g., Live Session with Local Band" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
+          </div>
+          <div>
+            <label class="block text-[11px] text-zinc-400 mb-1">Date & Time</label>
+            <input id="calEventDate" type="datetime-local" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500 mono" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-[11px] text-zinc-400 mb-1">Notes / Guest Info</label>
+          <input id="calEventNotes" type="text" placeholder="Contact number, promo tracks, run-sheet details..." class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
+        </div>
+        <button onclick="addCalendarEvent()" class="w-full py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white">+ Add to Station Calendar</button>
+      </div>
+
+      <div id="calendarEventsList" class="flex-1 overflow-y-auto space-y-2 pr-1"></div>
+
+      <div class="flex justify-end pt-2 border-t border-zinc-800">
+        <button onclick="toggleCalendarModal()" class="px-4 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm text-zinc-200">Done</button>
+      </div>
+    </div>
   </div>
 
   <!-- Show Manager Modal -->
@@ -182,7 +248,7 @@
       <div class="flex justify-between items-center border-b border-zinc-800 pb-3">
         <div>
           <h2 class="text-lg font-bold text-white">Show & Group Manager</h2>
-          <p class="text-xs text-zinc-400">Create, rename, clone templates, adjust target hours, or delete shows</p>
+          <p class="text-xs text-zinc-400">Create, clone templates, or adjust target hours</p>
         </div>
         <button onclick="closeShowManagerModal()" class="text-zinc-400 hover:text-white text-xl">&times;</button>
       </div>
@@ -215,8 +281,8 @@
         <button onclick="closeBlockModal()" class="text-zinc-400 hover:text-white text-xl">&times;</button>
       </div>
       <div>
-        <label class="block text-xs text-zinc-400 mb-1">Block Text (Use [TAGS] for cues)</label>
-        <textarea id="blockTextInput" rows="6" placeholder="[INTRO] Welcome back to the show..." class="w-full bg-zinc-950 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-100 font-mono focus:outline-none focus:border-indigo-500"></textarea>
+        <label class="block text-xs text-zinc-400 mb-1">Block Text (Line breaks respected)</label>
+        <textarea id="blockTextInput" rows="6" placeholder="[INTRO] Welcome back..." class="w-full bg-zinc-950 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-100 font-mono focus:outline-none focus:border-indigo-500"></textarea>
       </div>
       <div class="flex justify-end gap-2 pt-2">
         <button onclick="closeBlockModal()" class="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm text-zinc-300">Cancel</button>
@@ -226,17 +292,21 @@
   </div>
 
   <script>
-    // State Initializations (Must be declared before functions reference them)
+    // State Initializations
     let appState = {
       activeShowId: "show_morning",
+      fontSize: 19,
+      layoutMode: "standard",
+      calendarEvents: [
+        { id: 1, title: "Falklands Radio Morning Live", datetime: "2026-11-14T08:00", notes: "Standard breakfast broadcast & news review" }
+      ],
       shows: [
         {
           id: "show_morning",
           title: "Morning Drive & News",
           targetHours: 1,
           blocks: [
-            { id: 1, html: '<span class="cue-tag">[INTRO BED]</span> Good morning Stanley!<br><span class="meta-badge">📅 2026-11-13 08:00 &bull; Studio Live</span>', blackout: false },
-            { id: 2, html: '<span class="cue-tag">[COMPETITION]</span> Line 3 is John for the morning mystery voice giveaway.<br><span class="meta-badge">📅 2026-11-13 08:15 &bull; Contest Active</span>', blackout: false }
+            { id: 1, html: '<span class="cue-tag">[INTRO BED]</span> Good morning Stanley!\n\nTop of the hour news coming up next, followed by our morning weather update.', blackout: false }
           ]
         }
       ]
@@ -247,8 +317,10 @@
     let savedSelectedText = "";
     let cachedVoices = [];
     let currentResearchTab = "ai";
+    let currentNewsCategory = "general";
+    let researchCache = [];
 
-    // Firebase Config & Initialization (Replace with your actual Web API Key from Firebase Console)
+    // Firebase Config & Initialization
     const firebaseConfig = {
       apiKey: "AIzaSyClU9a-p2d-7VRuVZBRk6Fg8Ab1dgQ5HnI",
       authDomain: "script-buddy-v1.firebaseapp.com",
@@ -263,7 +335,6 @@
     const FIREBASE_ENDPOINT = "https://script-buddy-v1-default-rtdb.firebaseio.com/broadcast.json";
     const WPM = 145;
 
-    // Authentication State Observer
     auth.onAuthStateChanged((user) => {
       const loginOverlay = document.getElementById("loginOverlay");
       if (user) {
@@ -303,20 +374,101 @@
       window.speechSynthesis.onvoiceschanged = loadVoices;
     }
 
-    setInterval(() => {
-      document.getElementById("liveClock").textContent = new Date().toTimeString().split(" ")[0];
-    }, 1000);
+    // Font Size & Layout Controls
+    function adjustFontSize(delta) {
+      appState.fontSize = Math.max(14, Math.min(28, (appState.fontSize || 19) + delta));
+      saveAndSync();
+      render();
+    }
+
+    function switchLayoutMode(mode) {
+      appState.layoutMode = mode;
+      saveAndSync();
+      render();
+    }
+
+    // Calendar Functions
+    function toggleCalendarModal() {
+      renderCalendarEvents();
+      document.getElementById("calendarModal").classList.toggle("hidden");
+    }
+
+    function addCalendarEvent() {
+      const title = document.getElementById("calEventTitle").value.trim();
+      const datetime = document.getElementById("calEventDate").value;
+      const notes = document.getElementById("calEventNotes").value.trim();
+      if (!title || !datetime) return;
+
+      if (!appState.calendarEvents) appState.calendarEvents = [];
+      appState.calendarEvents.push({ id: Date.now(), title, datetime, notes });
+      document.getElementById("calEventTitle").value = "";
+      document.getElementById("calEventDate").value = "";
+      document.getElementById("calEventNotes").value = "";
+      saveAndSync();
+      renderCalendarEvents();
+    }
+
+    function deleteCalendarEvent(id) {
+      appState.calendarEvents = (appState.calendarEvents || []).filter(e => e.id !== id);
+      saveAndSync();
+      renderCalendarEvents();
+    }
+
+    function renderCalendarEvents() {
+      const list = document.getElementById("calendarEventsList");
+      list.innerHTML = "";
+      const events = (appState.calendarEvents || []).sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+
+      if (events.length === 0) {
+        list.innerHTML = `<div class="text-center text-zinc-500 text-xs py-6">No scheduled shows or events logged.</div>`;
+        return;
+      }
+
+      events.forEach(ev => {
+        const item = document.createElement("div");
+        item.className = "p-3 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-between gap-3 text-xs";
+        item.innerHTML = `
+          <div class="space-y-1">
+            <div class="font-bold text-zinc-100">${escapeHtml(ev.title)}</div>
+            <div class="text-indigo-400 mono">📅 ${ev.datetime.replace('T', ' ')}</div>
+            ${ev.notes ? `<div class="text-zinc-400 text-[11px]">${escapeHtml(ev.notes)}</div>` : ''}
+          </div>
+          <button onclick="deleteCalendarEvent(${ev.id})" class="px-2 py-1 bg-red-950/60 text-red-400 rounded">Delete</button>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    // Text Sanitization & Utilities
+    function stripHtmlEntities(raw) {
+      const div = document.createElement("div");
+      div.innerHTML = raw || "";
+      return (div.textContent || div.innerText || "").replace(/\s+/g, " ").trim();
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str || "";
+      return div.innerHTML;
+    }
+
+    function sliceTextByLength(fullText, mode) {
+      const clean = stripHtmlEntities(fullText);
+      if (!clean) return "";
+      if (mode === "full") return clean;
+      const sentences = clean.match(/[^.!?]+[.!?]+(\s|$)/g) || [clean];
+      if (mode === "brief") return sentences.slice(0, 1).join("").trim();
+      return sentences.slice(0, 3).join("").trim();
+    }
 
     // Floating Toolbar
     function updateSelectionToolbar() {
       const toolbar = document.getElementById("selectionToolbar");
       const selection = window.getSelection();
-
       if (!selection || selection.isCollapsed || !selection.toString().trim()) {
         toolbar.style.display = "none";
         return;
       }
-
       const range = selection.getRangeAt(0);
       const containerNode = range.commonAncestorContainer.nodeType === Node.TEXT_NODE
         ? range.commonAncestorContainer.parentElement
@@ -332,17 +484,13 @@
       savedSelectedText = selection.toString().trim();
 
       const rect = range.getBoundingClientRect();
-      const topPos = Math.max(10, window.scrollY + rect.top - 48);
-      const leftPos = Math.max(10, Math.min(window.innerWidth - 310, window.scrollX + rect.left + (rect.width / 2) - 140));
-
-      toolbar.style.top = `${topPos}px`;
-      toolbar.style.left = `${leftPos}px`;
+      toolbar.style.top = `${Math.max(10, window.scrollY + rect.top - 48)}px`;
+      toolbar.style.left = `${Math.max(10, Math.min(window.innerWidth - 310, window.scrollX + rect.left + (rect.width / 2) - 140))}px`;
       toolbar.style.display = "flex";
     }
 
     document.addEventListener("mouseup", () => setTimeout(updateSelectionToolbar, 10));
     document.addEventListener("keyup", () => setTimeout(updateSelectionToolbar, 10));
-    document.addEventListener("touchend", () => setTimeout(updateSelectionToolbar, 50));
 
     function applyInlineStyle(styleClass) {
       if (!activeRange) return;
@@ -352,7 +500,6 @@
         span.appendChild(activeRange.extractContents());
         activeRange.insertNode(span);
       } catch (e) { console.warn(e); }
-
       window.getSelection().removeAllRanges();
       activeRange = null;
       document.getElementById("selectionToolbar").style.display = "none";
@@ -373,18 +520,13 @@
     function speakSelection() {
       const textToSpeak = savedSelectedText || window.getSelection().toString().trim();
       if (!textToSpeak) return;
-
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(textToSpeak);
         utterance.lang = 'en-GB';
         utterance.rate = 0.95;
-
         const voices = cachedVoices.length ? cachedVoices : window.speechSynthesis.getVoices();
-        const ukVoice =
-          voices.find(v => v.lang === 'en-GB' && (v.name.includes('Google') || v.name.includes('Daniel') || v.name.includes('Serena') || v.name.includes('Natural'))) ||
-          voices.find(v => v.lang === 'en-GB' || v.lang === 'en_GB' || v.name.includes('UK') || v.name.includes('British'));
-
+        const ukVoice = voices.find(v => v.lang === 'en-GB' && (v.name.includes('Daniel') || v.name.includes('Google') || v.name.includes('Natural'))) || voices.find(v => v.lang.includes('en'));
         if (ukVoice) utterance.voice = ukVoice;
         window.speechSynthesis.speak(utterance);
       }
@@ -394,10 +536,8 @@
       const query = savedSelectedText || window.getSelection().toString().trim();
       if (!query) return;
       document.getElementById("selectionToolbar").style.display = "none";
-
       const drawer = document.getElementById("researchDrawer");
       if (drawer.classList.contains("translate-x-full")) toggleResearchDock();
-      if (currentResearchTab === "news") switchResearchTab("ai");
       document.getElementById("researchQueryInput").value = query;
       runResearchPlugin();
     }
@@ -408,7 +548,7 @@
       document.querySelectorAll(".script-text-area").forEach(el => {
         const id = parseInt(el.dataset.id);
         const block = show.blocks.find(b => b.id === id);
-        if (block) block.html = el.innerHTML;
+        if (block) block.innerHTML = el.innerHTML;
       });
       saveAndSync();
       render();
@@ -427,6 +567,13 @@
 
     // Main Renderer
     function render() {
+      document.getElementById("fontSizeIndicatorגה")?.remove(); // cleanup
+      const fontSize = appState.fontSize || 19;
+      const layoutMode = appState.layoutMode || "standard";
+
+      document.getElementById("fontSizeIndicator").textContent = fontSize + "px";
+      document.getElementById("layoutModeSelector").value = layoutMode;
+
       const selector = document.getElementById("showSelector");
       selector.innerHTML = "";
       appState.shows.forEach(show => {
@@ -443,6 +590,7 @@
       document.getElementById("timeTarget").textContent = currentShow.targetHours + "h";
 
       const container = document.getElementById("blocksContainer");
+      container.className = layoutMode === "compact" ? "space-y-2" : "space-y-4";
       container.innerHTML = "";
 
       let totalWords = 0;
@@ -450,7 +598,7 @@
       if (!currentShow.blocks || currentShow.blocks.length === 0) {
         container.innerHTML = `
           <div class="text-center py-12 border border-dashed border-zinc-800 rounded-xl text-zinc-500 text-sm">
-            No script blocks in <strong>${currentShow.title}</strong> yet. Click <strong>+ Add Block</strong> or pull stories from <strong>🌐 Research & News</strong>.
+            No blocks in <strong>${escapeHtml(currentShow.title)}</strong> yet. Tap <strong>+ Block</strong> to add text.
           </div>
         `;
       } else {
@@ -464,23 +612,25 @@
           const blockSecs = Math.round((words / WPM) * 60);
 
           const card = document.createElement("div");
-          card.className = `script-block group relative p-4 rounded-xl bg-zinc-900/80 border border-zinc-800 transition-all ${block.blackout ? 'block-blackout' : ''}`;
+          const padClass = layoutMode === "compact" ? "p-3" : (layoutMode === "teleprompter" ? "p-6 sm:p-8 bg-zinc-950 border-indigo-500/40" : "p-4");
+          card.className = `script-block group relative rounded-xl bg-zinc-900/80 border border-zinc-800 transition-all ${padClass} ${block.blackout ? 'block-blackout' : ''}`;
 
           card.innerHTML = `
-            <div class="flex items-start justify-between gap-4">
-              <div class="script-text-area flex-1 text-[19px] leading-relaxed outline-none cursor-text" data-id="${block.id}">${block.html}</div>
-              <div class="flex items-center gap-1 opacity-30 group-hover:opacity-100 transition-opacity shrink-0">
-                <button title="Blackout / Discard Block" onclick="toggleBlackout(${block.id})" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded text-xs font-semibold">${block.blackout ? 'Restore' : 'Blackout'}</button>
-                <button title="Edit Block Text" onclick="openBlockModal('edit', ${block.id})" class="px-2 py-1 bg-zinc-800 text-indigo-400 rounded text-xs font-semibold">Edit</button>
+            <div class="flex items-start justify-between gap-3">
+              <div class="script-text-area flex-1 leading-relaxed outline-none cursor-text" style="font-size: ${fontSize}px;" data-id="${block.id}">${block.html}</div>
+              <div class="flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity shrink-0">
+                <button title="Blackout" onclick="toggleBlackout(${block.id})" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded text-[11px] font-semibold">${block.blackout ? 'Show' : 'Hide'}</button>
+                <button title="Edit" onclick="openBlockModal('edit', ${block.id})" class="px-2 py-1 bg-zinc-800 text-indigo-400 rounded text-[11px] font-semibold">Edit</button>
                 <button title="Move Up" onclick="moveBlock(${block.id}, -1)" class="px-1.5 py-1 bg-zinc-800 text-zinc-300 rounded text-xs">▲</button>
                 <button title="Move Down" onclick="moveBlock(${block.id}, 1)" class="px-1.5 py-1 bg-zinc-800 text-zinc-300 rounded text-xs">▼</button>
-                <button title="Delete" onclick="deleteBlock(${block.id})" class="px-1.5 py-1 bg-red-950/60 text-red-400 rounded text-xs ml-1">🗑</button>
+                <button title="Delete" onclick="deleteBlock(${block.id})" class="px-1.5 py-1 bg-red-950/60 text-red-400 rounded text-xs">🗑</button>
               </div>
             </div>
-            <div class="mt-2.5 pt-2 border-t border-zinc-800/60 flex items-center justify-between text-[11px] mono text-zinc-500">
-              <span>BLOCK #${idx + 1} &bull; EST. <strong class="text-zinc-400">${blockSecs}s</strong> (${words} words)</span>
-              <span class="text-zinc-400">Select words for UK TTS, Lookup, or styling</span>
-            </div>
+            ${layoutMode !== 'compact' ? `
+              <div class="mt-2.5 pt-2 border-t border-zinc-800/60 flex items-center justify-between text-[11px] mono text-zinc-500">
+                <span>BLOCK #${idx + 1} &bull; EST. <strong class="text-zinc-400">${blockSecs}s</strong> (${words}w)</span>
+              </div>
+            ` : ''}
           `;
           container.appendChild(card);
         });
@@ -532,30 +682,22 @@
     function renderShowManagerList() {
       const list = document.getElementById("showManagerList");
       list.innerHTML = "";
-
       appState.shows.forEach(show => {
         const isActive = show.id === appState.activeShowId;
-        const blockCount = show.blocks ? show.blocks.length : 0;
-
         const row = document.createElement("div");
         row.className = `p-3.5 rounded-xl border ${isActive ? 'bg-indigo-950/20 border-indigo-500/50' : 'bg-zinc-950 border-zinc-800'} flex flex-wrap sm:flex-nowrap items-center justify-between gap-3`;
         row.innerHTML = `
           <div class="flex-1 min-w-[200px] space-y-1.5">
-            <input type="text" value="${show.title.replace(/"/g, '&quot;')}" onchange="updateShowMeta('${show.id}', 'title', this.value)" class="bg-zinc-900 border border-zinc-700 rounded px-2.5 py-1 text-sm font-bold text-zinc-100 w-full focus:outline-none focus:border-indigo-500" />
+            <input type="text" value="${escapeHtml(show.title)}" onchange="updateShowMeta('${show.id}', 'title', this.value)" class="bg-zinc-900 border border-zinc-700 rounded px-2.5 py-1 text-sm font-bold text-zinc-100 w-full focus:outline-none focus:border-indigo-500" />
             <div class="flex items-center gap-3 text-xs text-zinc-400">
-              <label class="flex items-center gap-1">
-                Target Hours:
-                <input type="number" step="0.5" min="0.5" value="${show.targetHours}" onchange="updateShowMeta('${show.id}', 'targetHours', this.value)" class="w-16 bg-zinc-900 border border-zinc-700 rounded px-2 py-0.5 text-zinc-200 mono" />
-              </label>
-              <span>&bull; ${blockCount} blocks</span>
+              <label class="flex items-center gap-1">Hours: <input type="number" step="0.5" min="0.5" value="${show.targetHours}" onchange="updateShowMeta('${show.id}', 'targetHours', this.value)" class="w-16 bg-zinc-900 border border-zinc-700 rounded px-2 py-0.5 text-zinc-200 mono" /></label>
               ${isActive ? '<span class="text-emerald-400 font-semibold">&bull; Active</span>' : ''}
             </div>
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
-            ${!isActive ? `<button onclick="switchShow('${show.id}'); renderShowManagerList();" class="px-2.5 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-200 font-medium">Open</button>` : ''}
-            <button onclick="duplicateShow('${show.id}')" class="px-2.5 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-xs text-indigo-300 font-medium">Clone</button>
-            <button onclick="clearShowBlocks('${show.id}')" class="px-2.5 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-xs text-amber-300 font-medium">Clear</button>
-            <button onclick="deleteShow('${show.id}')" class="px-2.5 py-1.5 rounded bg-red-950/70 hover:bg-red-900 text-xs text-red-300 font-semibold">Delete</button>
+            ${!isActive ? `<button onclick="switchShow('${show.id}'); renderShowManagerList();" class="px-2.5 py-1.5 rounded bg-zinc-800 text-xs text-zinc-200">Open</button>` : ''}
+            <button onclick="duplicateShow('${show.id}')" class="px-2.5 py-1.5 rounded bg-zinc-800 text-xs text-indigo-300">Clone</button>
+            <button onclick="deleteShow('${show.id}')" class="px-2.5 py-1.5 rounded bg-red-950/70 text-xs text-red-300">Delete</button>
           </div>
         `;
         list.appendChild(row);
@@ -569,11 +711,10 @@
       const hours = parseFloat(hoursInput.value) || 1;
       if (!name) return;
 
-      const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 16);
       const newId = "show_" + Date.now();
       appState.shows.push({
         id: newId, title: name, targetHours: hours,
-        blocks: [{ id: Date.now(), html: `<span class="cue-tag">[INTRO]</span> Welcome to ${name}<br><span class="meta-badge">📅 ${nowStr} &bull; Created</span>`, blackout: false }]
+        blocks: [{ id: Date.now(), html: `<span class="cue-tag">[INTRO]</span> Welcome to ${escapeHtml(name)}`, blackout: false }]
       });
       appState.activeShowId = newId;
       nameInput.value = "";
@@ -585,7 +726,7 @@
     function updateShowMeta(showId, field, value) {
       const show = appState.shows.find(s => s.id === showId);
       if (!show) return;
-      if (field === "title" && value.trim()) show.title = value.trim();
+      if (field === "title") show.title = value.trim();
       else if (field === "targetHours") show.targetHours = Math.max(0.5, parseFloat(value) || 1);
       saveAndSync();
       render();
@@ -603,19 +744,8 @@
       renderShowManagerList();
     }
 
-    function clearShowBlocks(showId) {
-      const show = appState.shows.find(s => s.id === showId);
-      if (!show || !confirm(`Clear all script blocks from "${show.title}"?`)) return;
-      show.blocks = [];
-      saveAndSync();
-      render();
-      renderShowManagerList();
-    }
-
     function deleteShow(showId) {
-      if (appState.shows.length <= 1) { alert("You must keep at least one show."); return; }
-      const show = appState.shows.find(s => s.id === showId);
-      if (!confirm(`Permanently delete "${show ? show.title : 'this show'}"?`)) return;
+      if (appState.shows.length <= 1) { alert("Must keep at least one show."); return; }
       appState.shows = appState.shows.filter(s => s.id !== showId);
       if (appState.activeShowId === showId) appState.activeShowId = appState.shows[0].id;
       saveAndSync();
@@ -623,7 +753,7 @@
       renderShowManagerList();
     }
 
-    // Research Plugins & Timestamps
+    // Research Plugins
     function toggleResearchDock() {
       const drawer = document.getElementById("researchDrawer");
       document.getElementById("scratchpadDrawer").classList.add("translate-x-full");
@@ -636,99 +766,95 @@
         const btn = document.getElementById("tab_" + t);
         btn.className = t === tab ? "py-1.5 rounded bg-indigo-600 text-white" : "py-1.5 rounded text-zinc-400 hover:text-zinc-200";
       });
-
       const searchBox = document.getElementById("researchSearchBox");
       const newsBox = document.getElementById("newsCategoryBox");
-      const input = document.getElementById("researchQueryInput");
-
       if (tab === "news") {
         searchBox.classList.add("hidden");
         newsBox.classList.remove("hidden");
-        loadNewsFeed("general");
+        loadNewsFeed(currentNewsCategory);
       } else {
         searchBox.classList.remove("hidden");
         newsBox.classList.add("hidden");
-        if (tab === "ai") input.placeholder = "Ask anything for an instant AI/Web overview...";
-        if (tab === "song") input.placeholder = "Search song title or artist...";
-        if (tab === "wiki") input.placeholder = "Search Wikipedia article...";
+        if (document.getElementById("researchQueryInput").value.trim()) runResearchPlugin();
       }
+    }
+
+    function registerResearchCacheItem(htmlPayload) {
+      const idx = researchCache.length;
+      researchCache.push(htmlPayload);
+      return idx;
+    }
+
+    function injectResearchBlock(cacheIndex) {
+      const htmlContent = researchCache[cacheIndex];
+      if (!htmlContent) return;
+      const show = appState.shows.find(s => s.id === appState.activeShowId);
+      if (!show) return;
+      if (!show.blocks) show.blocks = [];
+      show.blocks.push({ id: Date.now() + Math.floor(Math.random() * 1000), html: htmlContent, blackout: false });
+      saveAndSync();
+      render();
     }
 
     async function runResearchPlugin() {
       const query = document.getElementById("researchQueryInput").value.trim();
       if (!query) return;
       const resultsDiv = document.getElementById("researchResults");
-      resultsDiv.innerHTML = `<div class="text-center text-zinc-400 text-xs py-8 animate-pulse">Fetching live data for "${query}"...</div>`;
+      resultsDiv.innerHTML = `<div class="text-center text-zinc-400 text-xs py-8 animate-pulse">Fetching data...</div>`;
 
       try {
         if (currentResearchTab === "ai") await fetchAIOverview(query, resultsDiv);
         else if (currentResearchTab === "song") await fetchSongInfo(query, resultsDiv);
         else if (currentResearchTab === "wiki") await fetchWikipedia(query, resultsDiv);
       } catch (err) {
-        resultsDiv.innerHTML = `<div class="p-3 rounded-lg bg-red-950/50 border border-red-800 text-xs text-red-300">Lookup failed: ${err.message}</div>`;
+        resultsDiv.innerHTML = `<div class="p-3 bg-red-950/50 text-xs text-red-300">Lookup failed.</div>`;
       }
     }
 
     async function fetchAIOverview(query, container) {
-      const ddgRes = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`);
-      const ddg = await ddgRes.json();
-      let summary = ddg.AbstractText || ddg.Answer || "";
-      let sourceName = ddg.AbstractSource || "Web Overview";
+      researchCache = [];
+      const lengthMode = document.getElementById("storyLengthMode").value;
+      const res = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`);
+      const ddg = await res.json();
+      let rawSummary = ddg.AbstractText || ddg.Answer || "";
+      if (!rawSummary) rawSummary = `Overview details for ${query}.`;
 
-      if (!summary) {
-        const wikiSearch = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`);
-        const wikiData = await wikiSearch.json();
-        if (wikiData.query && wikiData.query.search.length > 0) {
-          const topTitle = wikiData.query.search[0].title;
-          const sumRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topTitle)}`);
-          const sumJson = await sumRes.json();
-          summary = sumJson.extract || "";
-          sourceName = `Wikipedia: ${topTitle}`;
-        }
-      }
+      const sized = sliceTextByLength(rawSummary, lengthMode);
+      const htmlBlock = `<span class="cue-tag">[INFO]</span> ${escapeHtml(sized)}<br><span class="meta-badge">📅 Web Research</span>`;
+      const cacheId = registerResearchCacheItem(htmlBlock);
 
-      if (!summary) {
-        container.innerHTML = `<div class="p-4 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-zinc-300">No instant summary found.</div>`;
-        return;
-      }
-
-      const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 16);
-      const htmlBlock = `<span class="cue-tag">[INFO: ${query.toUpperCase()}]</span> ${summary}<br><span class="meta-badge">📅 ${nowStr} &bull; Source: ${sourceName}</span>`;
-      
       container.innerHTML = `
         <div class="p-4 rounded-xl bg-zinc-900 border border-zinc-800 space-y-3">
-          <div class="flex items-center justify-between text-xs text-indigo-400 font-bold">✨ AI / WEB OVERVIEW</div>
-          <p class="text-zinc-200 text-sm">${summary}</p>
-          <button onclick='injectResearchBlock(${JSON.stringify(htmlBlock)})' class="w-full py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold">+ Insert into Active Show</button>
+          <p class="text-zinc-200 text-sm">${escapeHtml(sized)}</p>
+          <button onclick="injectResearchBlock(${cacheId})" class="w-full py-2 rounded bg-emerald-700 text-white text-xs font-semibold">+ Insert into Active Show</button>
         </div>
       `;
     }
 
     async function fetchSongInfo(query, container) {
-      const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=6`);
+      researchCache = [];
+      const lengthMode = document.getElementById("storyLengthMode").value;
+      const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=5`);
       const data = await res.json();
       if (!data.results || data.results.length === 0) {
         container.innerHTML = `<div class="text-center text-zinc-500 text-xs py-8">No songs found.</div>`;
         return;
       }
-
       container.innerHTML = "";
       data.results.forEach(track => {
-        const year = track.releaseDate ? track.releaseDate.slice(0, 4) : "Unknown";
-        const mins = Math.floor((track.trackTimeMillis || 0) / 60000);
-        const secs = Math.floor(((track.trackTimeMillis || 0) % 60000) / 1000);
-        const dur = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-        const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 16);
-        const htmlBlock = `<span class="cue-tag">[MUSIC INFO]</span> That was "${track.trackName}" by ${track.artistName}, released in ${year} (${track.primaryGenreName}, ${dur}).<br><span class="meta-badge">📅 ${nowStr} &bull; Apple Music &bull; ${dur}</span>`;
+        const year = track.releaseDate ? track.releaseDate.slice(0, 4) : "";
+        const scriptLine = lengthMode === "brief" ? `That was "${track.trackName}" by ${track.artistName}.` : `That was "${track.trackName}" by ${track.artistName}, released in ${year}.`;
+        const htmlBlock = `<span class="cue-tag">[MUSIC]</span> ${escapeHtml(scriptLine)}<br><span class="meta-badge">📅 Apple Music</span>`;
+        const cacheId = registerResearchCacheItem(htmlBlock);
 
         const item = document.createElement("div");
         item.className = "p-3 rounded-xl bg-zinc-900 border border-zinc-800 flex gap-3 items-start";
         item.innerHTML = `
-          <img src="${track.artworkUrl60}" alt="Cover" class="w-12 h-12 rounded-lg shrink-0 bg-zinc-800" />
+          <img src="${track.artworkUrl60}" class="w-12 h-12 rounded bg-zinc-800 shrink-0" />
           <div class="flex-1 min-w-0 space-y-1">
-            <div class="font-bold text-zinc-100 text-sm truncate">${track.trackName}</div>
-            <div class="text-xs text-indigo-400 truncate">${track.artistName} &bull; ${year}</div>
-            <button onclick='injectResearchBlock(${JSON.stringify(htmlBlock)})' class="mt-1.5 px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-semibold">+ Insert Back-Announce</button>
+            <div class="font-bold text-zinc-100 text-xs truncate">${escapeHtml(track.trackName)}</div>
+            <div class="text-xs text-indigo-400 truncate">${escapeHtml(track.artistName)}</div>
+            <button onclick="injectResearchBlock(${cacheId})" class="px-2.5 py-1 rounded bg-emerald-700 text-white text-[11px] font-semibold">+ Insert</button>
           </div>
         `;
         container.appendChild(item);
@@ -736,84 +862,72 @@
     }
 
     async function fetchWikipedia(query, container) {
-      const searchRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srlimit=4&format=json&origin=*`);
-      const searchData = await searchRes.json();
-      if (!searchData.query || searchData.query.search.length === 0) {
-        container.innerHTML = `<div class="text-center text-zinc-500 text-xs py-8">No Wikipedia results.</div>`;
+      researchCache = [];
+      const lengthMode = document.getElementById("storyLengthMode").value;
+      const res = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srlimit=3&format=json&origin=*`);
+      const data = await res.json();
+      if (!data.query || data.query.search.length === 0) {
+        container.innerHTML = `<div class="text-center text-zinc-500 text-xs py-8">No Wiki results.</div>`;
         return;
       }
-
       container.innerHTML = "";
-      for (const hit of searchData.query.search) {
+      for (const hit of data.query.search) {
         const sumRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(hit.title)}`);
         const page = await sumRes.json();
-        const extract = page.extract || hit.snippet.replace(/<[^>]+>/g, "");
-        const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 16);
-        const htmlBlock = `<span class="cue-tag">[FACT CHECK: ${page.title}]</span> ${extract}<br><span class="meta-badge">📅 ${nowStr} &bull; Wikipedia</span>`;
+        const sized = sliceTextByLength(page.extract || hit.snippet, lengthMode);
+        const htmlBlock = `<span class="cue-tag">[WIKI]</span> ${escapeHtml(sized)}<br><span class="meta-badge">📅 Wikipedia</span>`;
+        const cacheId = registerResearchCacheItem(htmlBlock);
 
         const card = document.createElement("div");
         card.className = "p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 space-y-2";
         card.innerHTML = `
-          <div class="font-bold text-zinc-100 text-sm">${page.title}</div>
-          <p class="text-xs text-zinc-300 line-clamp-4">${extract}</p>
-          <button onclick='injectResearchBlock(${JSON.stringify(htmlBlock)})' class="px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-semibold">+ Add to Script</button>
+          <div class="font-bold text-zinc-100 text-xs">${escapeHtml(page.title)}</div>
+          <p class="text-xs text-zinc-300">${escapeHtml(sized)}</p>
+          <button onclick="injectResearchBlock(${cacheId})" class="px-3 py-1 rounded bg-emerald-700 text-white text-[11px] font-semibold">+ Insert</button>
         `;
         container.appendChild(card);
       }
     }
 
     async function loadNewsFeed(category) {
+      currentNewsCategory = category;
+      researchCache = [];
+      const lengthMode = document.getElementById("storyLengthMode").value;
       ["general", "showbiz", "music"].forEach(c => {
-        const btn = document.getElementById("news_btn_" + c);
-        btn.className = c === category ? "flex-1 py-1.5 rounded bg-indigo-600 text-white text-xs font-semibold" : "flex-1 py-1.5 rounded bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 hover:text-zinc-200";
+        document.getElementById("news_btn_" + c).className = c === category ? "flex-1 py-1.5 rounded bg-indigo-600 text-white text-xs font-semibold" : "flex-1 py-1.5 rounded bg-zinc-900 border border-zinc-800 text-xs text-zinc-400";
       });
 
       const feeds = {
-        general: { label: "WORLD NEWS", url: "https://feeds.bbci.co.uk/news/world/rss.xml" },
-        showbiz: { label: "SHOWBIZ & TV", url: "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml" },
-        music: { label: "MUSIC NEWS", url: "https://www.nme.com/news/music/feed" }
+        general: "https://feeds.bbci.co.uk/news/world/rss.xml",
+        showbiz: "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml",
+        music: "https://www.nme.com/news/music/feed"
       };
 
-      const selected = feeds[category];
       const container = document.getElementById("researchResults");
-      container.innerHTML = `<div class="text-center text-zinc-400 text-xs py-8 animate-pulse">Loading live headlines...</div>`;
+      container.innerHTML = `<div class="text-center text-zinc-400 text-xs py-8 animate-pulse">Loading news...</div>`;
 
       try {
-        const api = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(selected.url)}`;
-        const res = await fetch(api);
+        const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feeds[category])}`);
         const data = await res.json();
-        if (!data.items || data.items.length === 0) throw new Error("No feed items");
-
         container.innerHTML = "";
-        data.items.slice(0, 8).forEach(item => {
-          const cleanDesc = (item.description || "").replace(/<[^>]+>/g, "").trim();
-          const pubDateStr = item.pubDate ? item.pubDate.replace('T', ' ').slice(0, 16) : new Date().toISOString().replace('T', ' ').slice(0, 16);
-          const htmlBlock = `<span class="cue-tag">[${selected.label}]</span> <strong>${item.title}</strong>. ${cleanDesc}<br><span class="meta-badge">📅 Published: ${pubDateStr} &bull; RSS Feed</span>`;
+        data.items.slice(0, 6).forEach(item => {
+          const title = stripHtmlEntities(item.title);
+          const desc = sliceTextByLength(item.description, lengthMode);
+          const htmlBlock = `<span class="cue-tag">[NEWS]</span> <strong>${escapeHtml(title)}</strong>. ${escapeHtml(desc)}<br><span class="meta-badge">📅 RSS Feed</span>`;
+          const cacheId = registerResearchCacheItem(htmlBlock);
 
           const card = document.createElement("div");
           card.className = "p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 space-y-2";
           card.innerHTML = `
-            <div class="font-bold text-zinc-100 text-xs leading-snug">${item.title}</div>
-            <p class="text-[11px] text-zinc-400 line-clamp-3">${cleanDesc}</p>
-            <div class="flex items-center justify-between pt-1">
-              <span class="text-[10px] mono text-emerald-400">📅 ${pubDateStr}</span>
-              <button onclick='injectResearchBlock(${JSON.stringify(htmlBlock)})' class="px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-semibold">+ Insert Headline</button>
-            </div>
+            <div class="font-bold text-zinc-100 text-xs">${escapeHtml(title)}</div>
+            <p class="text-[11px] text-zinc-400">${escapeHtml(desc)}</p>
+            <button onclick="injectResearchBlock(${cacheId})" class="px-2.5 py-1 rounded bg-emerald-700 text-white text-[11px] font-semibold">+ Insert Story</button>
           `;
           container.appendChild(card);
         });
       } catch (err) {
-        container.innerHTML = `<div class="p-3 rounded-lg bg-red-950/50 text-xs text-red-300">Could not load feed.</div>`;
+        container.innerHTML = `<div class="text-xs text-red-300">Could not load RSS feed.</div>`;
       }
-    }
-
-    function injectResearchBlock(htmlContent) {
-      const show = appState.shows.find(s => s.id === appState.activeShowId);
-      if (!show) return;
-      if (!show.blocks) show.blocks = [];
-      show.blocks.push({ id: Date.now(), html: htmlContent, blackout: false });
-      saveAndSync();
-      render();
     }
 
     function moveBlock(id, direction) {
@@ -838,18 +952,16 @@
 
     function openBlockModal(mode, id = null) {
       editingBlockId = mode === 'edit' ? id : null;
-      const modalTitle = document.getElementById("modalHeaderTitle");
+      document.getElementById("modalHeaderTitle").textContent = mode === 'edit' ? "Edit Block" : "Add Script Block";
       const textInput = document.getElementById("blockTextInput");
-
       if (mode === 'edit' && id !== null) {
-        modalTitle.textContent = "Edit Script Block";
         const show = appState.shows.find(s => s.id === appState.activeShowId);
         const block = show ? show.blocks.find(b => b.id === id) : null;
         const tmp = document.createElement("div");
         tmp.innerHTML = block ? block.html : "";
-        textInput.value = tmp.textContent || tmp.innerText || "";
+        tmp.querySelectorAll(".meta-badge").forEach(el => el.remove());
+        textInput.value = (tmp.textContent || tmp.innerText || "").trim();
       } else {
-        modalTitle.textContent = "Add Script Block";
         textInput.value = "";
       }
       document.getElementById("blockModal").classList.remove("hidden");
@@ -863,21 +975,18 @@
     function insertCueToModal(tag) {
       const textarea = document.getElementById("blockTextInput");
       if (document.getElementById("blockModal").classList.contains("hidden")) openBlockModal('add');
-      const val = textarea.value;
-      const selStart = textarea.selectionStart || val.length;
-      textarea.value = val.substring(0, selStart) + (selStart > 0 ? " " : "") + tag + " " + val.substring(textarea.selectionEnd || val.length);
+      textarea.value += (textarea.value ? " " : "") + tag + " ";
       textarea.focus();
     }
 
     function saveBlockModalData() {
-      const rawText = document.getElementById("blockTextInput").value.trim();
-      if (!rawText) return;
+      const rawText = document.getElementById("blockTextInput").value;
+      if (!rawText.trim()) return;
       const show = appState.shows.find(s => s.id === appState.activeShowId);
       if (!show) return;
       if (!show.blocks) show.blocks = [];
 
-      const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 16);
-      const formattedHtml = rawText.replace(/\[([^\]]+)\]/g, '<span class="cue-tag">[$1]</span>') + `<br><span class="meta-badge">📅 ${nowStr} &bull; Manual Entry</span>`;
+      const formattedHtml = escapeHtml(rawText).replace(/\[([^\]]+)\]/g, '<span class="cue-tag">[$1]</span>') + `<br><span class="meta-badge">📅 Manual Entry</span>`;
 
       if (editingBlockId !== null) {
         const block = show.blocks.find(b => b.id === editingBlockId);
@@ -885,7 +994,6 @@
       } else {
         show.blocks.push({ id: Date.now(), html: formattedHtml, blackout: false });
       }
-
       closeBlockModal();
       saveAndSync();
       render();
@@ -911,12 +1019,12 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(appState)
           });
-          if (!res.ok) throw new Error("HTTP " + res.status);
-          document.getElementById("syncBadge").textContent = "CLOUD SYNCED";
-          document.getElementById("syncBadge").className = "text-[11px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 mono";
-        } catch (err) {
-          document.getElementById("syncBadge").textContent = "LOCAL OFFLINE";
-          document.getElementById("syncBadge").className = "text-[11px] px-2 py-0.5 rounded-full bg-amber-950 text-amber-400 border border-amber-800 mono";
+          if (res.ok) {
+            document.getElementById("syncBadge").textContent = "SYNCED";
+            document.getElementById("syncBadge").className = "text-[11px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 mono";
+          }
+        } catch (e) {
+          document.getElementById("syncBadge").textContent = "OFFLINE";
         }
       }
     }
@@ -931,7 +1039,7 @@
             render();
             return;
           }
-        } catch (e) { console.warn("Using local storage fallback"); }
+        } catch (e) {}
       }
       const saved = localStorage.getItem("onair_app_state");
       if (saved) appState = JSON.parse(saved);

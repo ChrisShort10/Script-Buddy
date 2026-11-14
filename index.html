@@ -119,7 +119,10 @@
         <!-- Populated dynamically -->
       </select>
       <button onclick="openShowManagerModal()" class="px-2 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-[11px] sm:text-xs text-zinc-300 font-medium">Shows</button>
-      <span id="syncBadge" class="hidden sm:inline-block text-[11px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 mono">LOCAL</span>
+      <!-- Force Sync Button & Badge -->
+      <button onclick="forceSyncServer()" id="syncBadge" class="text-[11px] px-2.5 py-1 rounded-lg bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/60 mono transition-all flex items-center gap-1.5" title="Click to Force Sync All Data to Server">
+        <span>🔄 FORCE SYNC</span>
+      </button>
     </div>
 
     <!-- Backtiming & Live Stats Bar -->
@@ -131,7 +134,7 @@
 
     <!-- Pro Tools & Actions -->
     <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-      <!-- Font Size Stepper (Visible on both mobile & desktop) -->
+      <!-- Font Size Stepper -->
       <div class="flex items-center bg-zinc-900 border border-zinc-700 rounded-lg p-0.5 text-xs">
         <button onclick="adjustFontSize(-1)" class="px-2 py-1 hover:bg-zinc-800 text-zinc-300 rounded font-bold" title="Decrease Font Size">A-</button>
         <span id="fontSizeIndicator" class="px-1.5 text-zinc-400 mono text-[11px]">19px</span>
@@ -351,19 +354,12 @@
     const FIREBASE_ENDPOINT = "https://script-buddy-v1-default-rtdb.firebaseio.com/broadcast.json";
     const WPM = 145;
 
-    // =========================================================================
-    // LEGACY BLOCK MIGRATION (Recovers blocks from previous `html` format)
-    // =========================================================================
+    // Legacy Migration
     function htmlToCleanText(htmlStr) {
       if (!htmlStr) return "";
       const tmp = document.createElement("div");
-      // Convert <br> and block closing tags into newlines before extracting text
-      let normalized = htmlStr
-        .replace(/<br\s*\/?>/gi, "\n")
-        .replace(/<\/p>/gi, "\n\n")
-        .replace(/<\/div>/gi, "\n");
+      let normalized = htmlStr.replace(/<br\s*\/?>/gi, "\n").replace(/<\/p>/gi, "\n\n").replace(/<\/div>/gi, "\n");
       tmp.innerHTML = normalized;
-      // Strip old auto-generated meta-badges so they don't clutter raw text
       tmp.querySelectorAll(".meta-badge").forEach(el => el.remove());
       return (tmp.textContent || tmp.innerText || "").trim();
     }
@@ -482,38 +478,24 @@
       });
     }
 
-    // Markdown Parser (Bold, Italics, Underline, Headers, Lists, Tables, Images, Cues)
+    // Markdown Parser
     function parseMarkdownToHtml(rawText) {
       if (!rawText) return "";
       let text = escapeHtml(rawText);
 
-      // Cues [TAG]
       text = text.replace(/\[([^\]]+)\]/g, '<span class="cue-tag">[$1]</span>');
-
-      // Markdown Images ![alt](url)
       text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />');
-
-      // Bold **text** or __text__
       text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
       text = text.replace(/__(.*?)__/g, '<strong>$1</strong>');
-
-      // Italic *text* or _text_
       text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
       text = text.replace(/_(.*?)_/g, '<em>$1</em>');
-
-      // Underline <u>text</u> and <code>text</code>
       text = text.replace(/&lt;u&gt;(.*?)&lt;\/u&gt;/g, '<u>$1</u>');
       text = text.replace(/&lt;code&gt;(.*?)&lt;\/code&gt;/g, '<code class="mono bg-zinc-800 px-1 py-0.5 rounded text-xs">$1</code>');
-
-      // Headers #, ##, ###
       text = text.replace(/^### (.*$)/gm, '<h3 class="text-base font-bold text-indigo-400 my-2">$1</h3>');
-      text = text.replace(/^## (.*$)/gm, '<h2 class="text-lg font-bold text-zinc-100 my-2">$1</h2>');
+      text = text.replace(/^## (.*$)/gm, '<h2 class="text-lg font-bold text-zinc-100 my-2">$2</h2>');
       text = text.replace(/^# (.*$)/gm, '<h1 class="text-xl font-bold text-zinc-100 my-3">$1</h1>');
-
-      // Bullet points
       text = text.replace(/^\s*[-*]\s+(.*)$/gm, '&bull; $1');
 
-      // Tables parsing
       const lines = text.split('\n');
       let inTable = false;
       let tableHtml = '';
@@ -527,9 +509,7 @@
             tableHtml = '<div class="overflow-x-auto"><table>';
           }
           const cells = line.split('|').slice(1, -1).map(c => c.trim());
-          if (cells.every(c => c.match(/^[:\-\s]+$/))) {
-            continue;
-          }
+          if (cells.every(c => c.match(/^[:\-\s]+$/))) continue;
           const isHeader = !tableHtml.includes('<th>');
           const tag = isHeader ? 'th' : 'td';
           tableHtml += '<tr>' + cells.map(cell => `<${tag}>${cell}</${tag}>`).join('') + '</tr>';
@@ -572,84 +552,6 @@
       return sentences.slice(0, 3).join("").trim();
     }
 
-    // Floating Toolbar for Selection
-    function updateSelectionToolbar() {
-      const toolbar = document.getElementById("selectionToolbar");
-      const selection = window.getSelection();
-      if (!selection || selection.isCollapsed || !selection.toString().trim()) {
-        toolbar.style.display = "none";
-        return;
-      }
-      const range = selection.getRangeAt(0);
-      const containerNode = range.commonAncestorContainer.nodeType === Node.TEXT_NODE
-        ? range.commonAncestorContainer.parentElement
-        : range.commonAncestorContainer;
-
-      if (!containerNode || !containerNode.closest(".script-card")) {
-        toolbar.style.display = "none";
-        return;
-      }
-
-      activeRange = range.cloneRange();
-      savedSelectedText = selection.toString().trim();
-
-      const rect = range.getBoundingClientRect();
-      toolbar.style.top = `${Math.max(10, window.scrollY + rect.top - 48)}px`;
-      toolbar.style.left = `${Math.max(10, Math.min(window.innerWidth - 310, window.scrollX + rect.left + (rect.width / 2) - 140))}px`;
-      toolbar.style.display = "flex";
-    }
-
-    document.addEventListener("mouseup", () => setTimeout(updateSelectionToolbar, 10));
-    document.addEventListener("keyup", () => setTimeout(updateSelectionToolbar, 10));
-
-    function applyInlineStyle(styleClass) {
-      if (!activeRange) return;
-      const span = document.createElement("span");
-      span.className = styleClass;
-      try {
-        span.appendChild(activeRange.extractContents());
-        activeRange.insertNode(span);
-      } catch (e) { console.warn(e); }
-      window.getSelection().removeAllRanges();
-      activeRange = null;
-      document.getElementById("selectionToolbar").style.display = "none";
-    }
-
-    function clearSelectionFormatting() {
-      if (!activeRange) return;
-      const plain = document.createTextNode(activeRange.toString());
-      activeRange.deleteContents();
-      activeRange.insertNode(plain);
-      window.getSelection().removeAllRanges();
-      activeRange = null;
-      document.getElementById("selectionToolbar").style.display = "none";
-    }
-
-    function speakSelection() {
-      const textToSpeak = savedSelectedText || window.getSelection().toString().trim();
-      if (!textToSpeak) return;
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(textToSpeak);
-        utterance.lang = 'en-GB';
-        utterance.rate = 0.95;
-        const voices = cachedVoices.length ? cachedVoices : window.speechSynthesis.getVoices();
-        const ukVoice = voices.find(v => v.lang === 'en-GB' && (v.name.includes('Daniel') || v.name.includes('Google') || v.name.includes('Natural'))) || voices.find(v => v.lang.includes('en'));
-        if (ukVoice) utterance.voice = ukVoice;
-        window.speechSynthesis.speak(utterance);
-      }
-    }
-
-    function lookupSelectionInDock() {
-      const query = savedSelectedText || window.getSelection().toString().trim();
-      if (!query) return;
-      document.getElementById("selectionToolbar").style.display = "none";
-      const drawer = document.getElementById("researchDrawer");
-      if (drawer.classList.contains("translate-x-full")) toggleResearchDock();
-      document.getElementById("researchQueryInput").value = query;
-      runResearchPlugin();
-    }
-
     function toggleBlackout(id) {
       const show = appState.shows.find(s => s.id === appState.activeShowId);
       if (!show) return;
@@ -661,7 +563,6 @@
       }
     }
 
-    // Main Renderer
     function render() {
       const fontSize = appState.fontSize || 19;
       const layoutMode = appState.layoutMode || "standard";
@@ -698,7 +599,6 @@
         `;
       } else {
         currentShow.blocks.forEach((block, idx) => {
-          // Safe fallback if a legacy block ever slips through
           const raw = block.rawText !== undefined ? block.rawText : htmlToCleanText(block.html || "");
           const cleanText = stripHtmlEntities(raw.replace(/\[[^\]]+\]/g, ''));
           const words = cleanText ? cleanText.split(/\s+/).length : 0;
@@ -760,7 +660,6 @@
       return `${m}:${s < 10 ? "0" : ""}${s}`;
     }
 
-    // Show Manager
     function switchShow(showId) {
       appState.activeShowId = showId;
       saveAndSync();
@@ -854,7 +753,6 @@
       renderShowManagerList();
     }
 
-    // Research Plugins & Caching
     function toggleResearchDock() {
       const drawer = document.getElementById("researchDrawer");
       document.getElementById("scratchpadDrawer").classList.add("translate-x-full");
@@ -1071,24 +969,6 @@
       editingBlockId = null;
     }
 
-    function insertTextSnippet(prefix, suffix) {
-      const textarea = document.getElementById("blockTextInput");
-      if (document.getElementById("blockModal").classList.contains("hidden")) openBlockModal('add');
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const val = textarea.value;
-      textarea.value = val.substring(0, start) + prefix + val.substring(start, end) + suffix + val.substring(end);
-      textarea.focus();
-    }
-
-    function insertTableSnippet() {
-      const textarea = document.getElementById("blockTextInput");
-      if (document.getElementById("blockModal").classList.contains("hidden")) openBlockModal('add');
-      const tableTmpl = "\n| Time | Item / Guest |\n|---|---|\n| 08:00 | Station ID |\n| 08:05 | Featured Track |\n";
-      textarea.value += tableTmpl;
-      textarea.focus();
-    }
-
     function saveBlockModalData() {
       const rawText = document.getElementById("blockTextInput").value;
       if (!rawText.trim()) return;
@@ -1121,6 +1001,7 @@
       document.getElementById("scratchpadText").value = localStorage.getItem("onair_scratchpad");
     }
 
+    // Automatic & Manual Force Sync Handler
     async function saveAndSync() {
       localStorage.setItem("onair_app_state", JSON.stringify(appState));
       if (FIREBASE_ENDPOINT) {
@@ -1131,13 +1012,32 @@
             body: JSON.stringify(appState)
           });
           if (res.ok) {
-            document.getElementById("syncBadge").textContent = "SYNCED";
-            document.getElementById("syncBadge").className = "text-[11px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 mono";
+            const badge = document.getElementById("syncBadge");
+            badge.innerHTML = "<span>☁️ SYNCED</span>";
+            badge.className = "text-[11px] px-2.5 py-1 rounded-lg bg-emerald-950 text-emerald-400 border border-emerald-800 mono transition-all flex items-center gap-1.5";
           }
         } catch (e) {
-          document.getElementById("syncBadge").textContent = "OFFLINE";
+          const badge = document.getElementById("syncBadge");
+          badge.innerHTML = "<span>⚠️ OFFLINE</span>";
+          badge.className = "text-[11px] px-2.5 py-1 rounded-lg bg-amber-950 text-amber-400 border border-amber-800 mono transition-all flex items-center gap-1.5";
         }
       }
+    }
+
+    async function forceSyncServer() {
+      const badge = document.getElementById("syncBadge");
+      badge.innerHTML = "<span>🔄 SYNCING...</span>";
+      badge.className = "text-[11px] px-2.5 py-1 rounded-lg bg-indigo-900 text-white border border-indigo-500 mono transition-all flex items-center gap-1.5 animate-pulse";
+      
+      await saveAndSync();
+      
+      setTimeout(() => {
+        badge.innerHTML = "<span>✅ FORCE SYNCED</span>";
+        setTimeout(() => {
+          badge.innerHTML = "<span>🔄 FORCE SYNC</span>";
+          badge.className = "text-[11px] px-2.5 py-1 rounded-lg bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/60 mono transition-all flex items-center gap-1.5";
+        }, 2000);
+      }, 500);
     }
 
     async function initLoad() {

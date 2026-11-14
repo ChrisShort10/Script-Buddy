@@ -9,7 +9,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Playfair+Display:ital,wght@0,600;1,400&family=Fira+Code:wght@500&display=swap');
+    
     body { font-family: 'Inter', sans-serif; background-color: #09090b; color: #f4f4f5; }
     .mono { font-family: 'JetBrains Mono', monospace; }
     
@@ -30,17 +31,11 @@
       padding: 1px 7px; border-radius: 5px; margin-right: 6px; vertical-align: middle;
     }
 
-    .meta-badge {
-      display: inline-flex; align-items: center; gap: 4px;
-      background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);
-      font-family: 'JetBrains Mono', monospace; font-size: 0.7em; font-weight: 600;
-      padding: 2px 6px; border-radius: 4px; margin-top: 6px;
-    }
-
     /* Script block formatting & tables */
     .script-text-area {
       white-space: pre-wrap;
       word-break: break-word;
+      outline: none;
     }
     .script-text-area table {
       width: 100%;
@@ -99,12 +94,15 @@
     </div>
   </div>
 
-  <!-- Floating Selection Toolbar -->
+  <!-- Floating Selection Toolbar (Reading Mode Interactivity) -->
   <div id="selectionToolbar" onmousedown="event.preventDefault()">
     <button type="button" onclick="applyInlineStyle('hl-yellow')" class="w-6 h-6 rounded bg-yellow-400 hover:scale-110 transition-transform" title="Highlight Yellow"></button>
     <button type="button" onclick="applyInlineStyle('hl-cyan')" class="w-6 h-6 rounded bg-cyan-400 hover:scale-110 transition-transform" title="Highlight Cyan"></button>
     <button type="button" onclick="applyInlineStyle('hl-pink')" class="w-6 h-6 rounded bg-pink-400 hover:scale-110 transition-transform" title="Highlight Pink"></button>
     <button type="button" onclick="applyInlineStyle('strikethrough')" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold line-through" title="Strikethrough Selection">S</button>
+    <button type="button" onclick="applyInlineStyle('font-bold')" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold" title="Bold">B</button>
+    <button type="button" onclick="applyInlineStyle('italic')" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs italic" title="Italic">I</button>
+    <button type="button" onclick="applyInlineStyle('underline')" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs underline" title="Underline">U</button>
     <button type="button" onclick="clearSelectionFormatting()" class="px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-[11px]" title="Clear Formatting">✕</button>
     <div class="h-4 w-px bg-zinc-700 mx-0.5"></div>
     <button type="button" onclick="speakSelection()" class="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1" title="Pronounce in UK English">🔊 UK</button>
@@ -134,6 +132,14 @@
 
     <!-- Pro Tools & Actions -->
     <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+      <!-- Font Family Selector -->
+      <select id="globalFontFamily" onchange="switchGlobalFont(this.value)" class="bg-zinc-900 border border-zinc-700 text-zinc-300 text-xs px-2 py-1.5 rounded-lg focus:outline-none focus:border-indigo-500">
+        <option value="Inter, sans-serif">Inter</option>
+        <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+        <option value="'Playfair Display', serif">Playfair Display</option>
+        <option value="'Fira Code', monospace">Fira Code</option>
+      </select>
+
       <!-- Font Size Stepper -->
       <div class="flex items-center bg-zinc-900 border border-zinc-700 rounded-lg p-0.5 text-xs">
         <button onclick="adjustFontSize(-1)" class="px-2 py-1 hover:bg-zinc-800 text-zinc-300 rounded font-bold" title="Decrease Font Size">A-</button>
@@ -159,15 +165,9 @@
   <!-- Main Content Workspace -->
   <main id="mainWorkspace" class="flex-1 max-w-4xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
     <div class="bg-zinc-900/60 border border-zinc-800 p-2.5 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs">
-      <div class="text-zinc-400 font-medium">Quick Markdown & Cues:</div>
-      <div class="flex flex-wrap gap-1.5">
-        <button onclick="insertTextSnippet('**', '**')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded font-bold">**Bold**</button>
-        <button onclick="insertTextSnippet('<u>', '</u>')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded underline"><u>Underline</u></button>
-        <button onclick="insertTextSnippet('*', '*')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded italic">*Italic*</button>
-        <button onclick="insertTextSnippet('[INTRO] ', '')" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-amber-300 rounded mono">[INTRO]</button>
-        <button onclick="insertTableSnippet()" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-emerald-300 rounded mono">+ Table</button>
-      </div>
-      <div class="text-zinc-500 text-[11px] hidden md:block">Markdown tables & full formatting supported</div>
+      <div class="text-zinc-400 font-medium">💡 Reading Mode Tip:</div>
+      <div class="text-zinc-300">Highlight any text directly in the blocks below to <strong>highlight</strong>, <strong>strike through</strong>, or <strong>pronounce</strong> instantly.</div>
+      <div class="text-emerald-400 text-[11px]">Interactive Reading App</div>
     </div>
 
     <div id="blocksContainer" class="space-y-4"></div>
@@ -296,18 +296,38 @@
     </div>
   </div>
 
-  <!-- Add / Edit Block Modal -->
+  <!-- Add / Edit Block Modal (Enhanced with Formatting & Tables Toolbar) -->
   <div id="blockModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-zinc-900 border border-zinc-700 rounded-xl max-w-xl w-full p-6 shadow-2xl space-y-4">
-      <div class="flex justify-between items-center">
+    <div class="bg-zinc-900 border border-zinc-700 rounded-xl max-w-2xl w-full p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b border-zinc-800 pb-2">
         <h2 id="modalHeaderTitle" class="text-lg font-bold text-white">Add Script Block</h2>
         <button onclick="closeBlockModal()" class="text-zinc-400 hover:text-white text-xl">&times;</button>
       </div>
-      <div>
-        <label class="block text-xs text-zinc-400 mb-1">Block Text (Supports Markdown, Tables: <code>| Col | Col |</code>, and Images: <code>![Alt](URL)</code>)</label>
-        <textarea id="blockTextInput" rows="8" placeholder="[INTRO] Welcome back...\n\n| Time | Segment |\n|---|---|\n| 08:00 | News |" class="w-full bg-zinc-950 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-100 font-mono focus:outline-none focus:border-indigo-500"></textarea>
+
+      <!-- Formatting & Block Construction Toolbar -->
+      <div class="flex flex-wrap items-center gap-1.5 bg-zinc-950 p-2 rounded-lg border border-zinc-800 text-xs">
+        <span class="text-zinc-400 font-medium mr-1">Formatting:</span>
+        <button type="button" onclick="insertModalSnippet('**', '**')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded font-bold border border-zinc-700">**Bold**</button>
+        <button type="button" onclick="insertModalSnippet('*', '*')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded italic border border-zinc-700">*Italic*</button>
+        <button type="button" onclick="insertModalSnippet('<u>', '</u>')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded underline border border-zinc-700"><u>Underline</u></button>
+        <button type="button" onclick="insertModalSnippet('~~', '~~')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded line-through border border-zinc-700">~~Strike~~</button>
+        
+        <div class="h-4 w-px bg-zinc-700 mx-1"></div>
+        
+        <button type="button" onclick="insertModalSnippet('# ', '')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-indigo-300 rounded font-bold border border-zinc-700">H1</button>
+        <button type="button" onclick="insertModalSnippet('## ', '')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-indigo-300 rounded font-bold border border-zinc-700">H2</button>
+        <button type="button" onclick="insertModalSnippet('[INTRO] ', '')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-amber-300 rounded mono border border-zinc-700">[CUE]</button>
+        
+        <div class="h-4 w-px bg-zinc-700 mx-1"></div>
+        
+        <button type="button" onclick="insertModalTableSnippet()" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-emerald-300 rounded mono border border-zinc-700">+ Table</button>
       </div>
-      <div class="flex justify-end gap-2 pt-2">
+
+      <div>
+        <textarea id="blockTextInput" rows="9" placeholder="Type or paste your script content here. Use the toolbar above for markdown headers, bold, tables, and cues..." class="w-full bg-zinc-950 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-100 font-mono focus:outline-none focus:border-indigo-500"></textarea>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t border-zinc-800">
         <button onclick="closeBlockModal()" class="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm text-zinc-300">Cancel</button>
         <button onclick="saveBlockModalData()" class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white">Save Block</button>
       </div>
@@ -318,6 +338,7 @@
     let appState = {
       activeShowId: "show_morning",
       fontSize: 19,
+      globalFont: "Inter, sans-serif",
       layoutMode: "standard",
       calendarEvents: [
         { id: 1, title: "Falklands Radio Morning Live", datetime: "2026-11-14T08:00", notes: "Standard breakfast broadcast & news review" }
@@ -325,10 +346,10 @@
       shows: [
         {
           id: "show_morning",
-          title: "Morning Drive & News",
+          title: "Live From Studio 1",
           targetHours: 1,
           blocks: [
-            { id: 1, rawText: "[INTRO BED] Good morning Stanley!\n\n| Time | Feature |\n|---|---|\n| 08:05 | Local Weather |\n| 08:15 | Morning Giveaway |", blackout: false }
+            { id: 1, rawText: "[INTRO BED] Good morning Stanley and outer islands!\n\n| Time | Segment / Track |\n|---|---|\n| 08:05 | Local News & Weather |\n| 08:15 | 80s Retro Anthem |", blackout: false }
           ]
         }
       ]
@@ -423,6 +444,12 @@
       render();
     }
 
+    function switchGlobalFont(fontFamily) {
+      appState.globalFont = fontFamily;
+      saveAndSync();
+      render();
+    }
+
     function switchLayoutMode(mode) {
       appState.layoutMode = mode;
       saveAndSync();
@@ -489,10 +516,11 @@
       text = text.replace(/__(.*?)__/g, '<strong>$1</strong>');
       text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
       text = text.replace(/_(.*?)_/g, '<em>$1</em>');
+      text = text.replace(/~~(.*?)~~/g, '<span class="strikethrough">$1</span>');
       text = text.replace(/&lt;u&gt;(.*?)&lt;\/u&gt;/g, '<u>$1</u>');
       text = text.replace(/&lt;code&gt;(.*?)&lt;\/code&gt;/g, '<code class="mono bg-zinc-800 px-1 py-0.5 rounded text-xs">$1</code>');
       text = text.replace(/^### (.*$)/gm, '<h3 class="text-base font-bold text-indigo-400 my-2">$1</h3>');
-      text = text.replace(/^## (.*$)/gm, '<h2 class="text-lg font-bold text-zinc-100 my-2">$2</h2>');
+      text = text.replace(/^## (.*$)/gm, '<h2 class="text-lg font-bold text-zinc-100 my-2">$1</h2>');
       text = text.replace(/^# (.*$)/gm, '<h1 class="text-xl font-bold text-zinc-100 my-3">$1</h1>');
       text = text.replace(/^\s*[-*]\s+(.*)$/gm, '&bull; $1');
 
@@ -563,11 +591,97 @@
       }
     }
 
+    // Floating Selection Toolbar for Direct Reading-Mode Editing
+    function updateSelectionToolbar() {
+      const toolbar = document.getElementById("selectionToolbar");
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed || !selection.toString().trim()) {
+        toolbar.style.display = "none";
+        return;
+      }
+      const range = selection.getRangeAt(0);
+      const containerNode = range.commonAncestorContainer.nodeType === Node.TEXT_NODE
+        ? range.commonAncestorContainer.parentElement
+        : range.commonAncestorContainer;
+
+      if (!containerNode || !containerNode.closest(".script-card")) {
+        toolbar.style.display = "none";
+        return;
+      }
+
+      activeRange = range.cloneRange();
+      savedSelectedText = selection.toString().trim();
+
+      const rect = range.getBoundingClientRect();
+      toolbar.style.top = `${Math.max(10, window.scrollY + rect.top - 48)}px`;
+      toolbar.style.left = `${Math.max(10, Math.min(window.innerWidth - 320, window.scrollX + rect.left + (rect.width / 2) - 150))}px`;
+      toolbar.style.display = "flex";
+    }
+
+    document.addEventListener("mouseup", () => setTimeout(updateSelectionToolbar, 10));
+    document.addEventListener("keyup", () => setTimeout(updateSelectionToolbar, 10));
+
+    function applyInlineStyle(styleClass) {
+      if (!activeRange) return;
+      const span = document.createElement("span");
+      if (styleClass === 'strikethrough') span.className = 'strikethrough';
+      else if (styleClass === 'font-bold') span.style.fontWeight = 'bold';
+      else if (styleClass === 'italic') span.style.fontStyle = 'italic';
+      else if (styleClass === 'underline') span.style.textDecoration = 'underline';
+      else span.className = styleClass;
+
+      try {
+        span.appendChild(activeRange.extractContents());
+        activeRange.insertNode(span);
+      } catch (e) { console.warn(e); }
+      window.getSelection().removeAllRanges();
+      activeRange = null;
+      document.getElementById("selectionToolbar").style.display = "none";
+    }
+
+    function clearSelectionFormatting() {
+      if (!activeRange) return;
+      const plain = document.createTextNode(activeRange.toString());
+      activeRange.deleteContents();
+      activeRange.insertNode(plain);
+      window.getSelection().removeAllRanges();
+      activeRange = null;
+      document.getElementById("selectionToolbar").style.display = "none";
+    }
+
+    function speakSelection() {
+      const textToSpeak = savedSelectedText || window.getSelection().toString().trim();
+      if (!textToSpeak) return;
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.lang = 'en-GB';
+        utterance.rate = 0.95;
+        const voices = cachedVoices.length ? cachedVoices : window.speechSynthesis.getVoices();
+        const ukVoice = voices.find(v => v.lang === 'en-GB' && (v.name.includes('Daniel') || v.name.includes('Google') || v.name.includes('Natural'))) || voices.find(v => v.lang.includes('en'));
+        if (ukVoice) utterance.voice = ukVoice;
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+
+    function lookupSelectionInDock() {
+      const query = savedSelectedText || window.getSelection().toString().trim();
+      if (!query) return;
+      document.getElementById("selectionToolbar").style.display = "none";
+      const drawer = document.getElementById("researchDrawer");
+      if (drawer.classList.contains("translate-x-full")) toggleResearchDock();
+      document.getElementById("researchQueryInput").value = query;
+      runResearchPlugin();
+    }
+
+    // Main Renderer
     function render() {
       const fontSize = appState.fontSize || 19;
+      const globalFont = appState.globalFont || "Inter, sans-serif";
       const layoutMode = appState.layoutMode || "standard";
 
       document.getElementById("fontSizeIndicator").textContent = fontSize + "px";
+      document.getElementById("globalFontFamily").value = globalFont;
       document.getElementById("layoutModeSelector").value = layoutMode;
 
       const selector = document.getElementById("showSelector");
@@ -594,7 +708,7 @@
       if (!currentShow.blocks || currentShow.blocks.length === 0) {
         container.innerHTML = `
           <div class="text-center py-12 border border-dashed border-zinc-800 rounded-xl text-zinc-500 text-sm">
-            No blocks in <strong>${escapeHtml(currentShow.title)}</strong> yet. Tap <strong>+ Block</strong> to add markdown text or tables.
+            No blocks in <strong>${escapeHtml(currentShow.title)}</strong> yet. Tap <strong>+ Block</strong> to add content.
           </div>
         `;
       } else {
@@ -613,7 +727,7 @@
 
           card.innerHTML = `
             <div class="flex items-start justify-between gap-3">
-              <div class="script-text-area flex-1 leading-relaxed outline-none" style="font-size: ${fontSize}px;">${renderedHtml}</div>
+              <div class="script-text-area flex-1 leading-relaxed" style="font-size: ${fontSize}px; font-family: ${globalFont};">${renderedHtml}</div>
               <div class="flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity shrink-0">
                 <button title="Blackout" onclick="toggleBlackout(${block.id})" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded text-[11px] font-semibold">${block.blackout ? 'Show' : 'Hide'}</button>
                 <button title="Edit" onclick="openBlockModal('edit', ${block.id})" class="px-2 py-1 bg-zinc-800 text-indigo-400 rounded text-[11px] font-semibold">Edit</button>
@@ -625,7 +739,7 @@
             ${layoutMode !== 'compact' ? `
               <div class="mt-2.5 pt-2 border-t border-zinc-800/60 flex items-center justify-between text-[11px] mono text-zinc-500">
                 <span>BLOCK #${idx + 1} &bull; EST. <strong class="text-zinc-400">${blockSecs}s</strong> (${words}w)</span>
-                <span class="text-zinc-400">Markdown & Tables Enabled</span>
+                <span class="text-zinc-400">Highlight/Strike Ready</span>
               </div>
             ` : ''}
           `;
@@ -969,6 +1083,22 @@
       editingBlockId = null;
     }
 
+    function insertModalSnippet(prefix, suffix) {
+      const textarea = document.getElementById("blockTextInput");
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const val = textarea.value;
+      textarea.value = val.substring(0, start) + prefix + val.substring(start, end) + suffix + val.substring(end);
+      textarea.focus();
+    }
+
+    function insertModalTableSnippet() {
+      const textarea = document.getElementById("blockTextInput");
+      const tableTmpl = "\n| Time | Segment / Track |\n|---|---|\n| 08:00 | Station ID |\n| 08:05 | Featured Track |\n";
+      textarea.value += tableTmpl;
+      textarea.focus();
+    }
+
     function saveBlockModalData() {
       const rawText = document.getElementById("blockTextInput").value;
       if (!rawText.trim()) return;
@@ -1001,7 +1131,6 @@
       document.getElementById("scratchpadText").value = localStorage.getItem("onair_scratchpad");
     }
 
-    // Automatic & Manual Force Sync Handler
     async function saveAndSync() {
       localStorage.setItem("onair_app_state", JSON.stringify(appState));
       if (FIREBASE_ENDPOINT) {

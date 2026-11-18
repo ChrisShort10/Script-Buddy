@@ -10,7 +10,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Playfair+Display:ital,wght@0,600;1,400&family=Fira+Code:wght@500&display=swap" rel="stylesheet">
   <style>
-   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Playfair+Display:ital,wght@0,600;1,400&family=Fira+Code:wght@500&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Playfair+Display:ital,wght@0,600;1,400&family=Fira+Code:wght@500&display=swap');
     
     body { font-family: 'Inter', sans-serif; background-color: #09090b; color: #f4f4f5; }
     .mono { font-family: 'JetBrains Mono', monospace; }
@@ -522,7 +522,7 @@
     const firebaseConfig = {
       apiKey: "AIzaSyClU9a-p2d-7VRuVZBRk6Fg8Ab1dgQ5HnI",
       authDomain: "script-buddy-v1.firebaseapp.com",
-      databaseURL: "[https://script-buddy-v1-default-rtdb.firebaseio.com](https://script-buddy-v1-default-rtdb.firebaseio.com)",
+      databaseURL: "https://script-buddy-v1-default-rtdb.firebaseio.com",
       projectId: "script-buddy-v1"
     };
 
@@ -712,21 +712,52 @@
       return (tmp.textContent || tmp.innerText || "").trim();
     }
 
-    // Run initialization immediately on DOM load
-window.addEventListener('DOMContentLoaded', () => {
-  initLoad();
-});
+    // Run initialization immediately on DOM load and fetch remote DB state
+    window.addEventListener('DOMContentLoaded', () => {
+      initLoad();
+    });
 
-// Optional: Keep auth listener non-blocking
-auth.onAuthStateChanged((user) => {
-  const loginOverlay = document.getElementById("loginOverlay");
-  if (user) {
-    loginOverlay.classList.add("hidden");
-  } else {
-    // Hide login overlay by default so GitHub Pages visitors aren't blocked
-    loginOverlay.classList.add("hidden");
-  }
-});
+    async function initLoad() {
+      // 1. Try loading directly from Firebase REST endpoint first so existing DB shows render
+      if (FIREBASE_ENDPOINT) {
+        try {
+          const res = await fetch(FIREBASE_ENDPOINT);
+          const remoteData = await res.json();
+          if (remoteData && remoteData.shows && Array.isArray(remoteData.shows)) {
+            appState = remoteData;
+            migrateStateStructure(appState);
+            localStorage.setItem("onair_app_state", JSON.stringify(appState));
+            render();
+            document.getElementById("syncBadge").innerHTML = "<span>☁️ SYNCED</span>";
+            return;
+          }
+        } catch (e) {
+          console.warn("Could not fetch remote DB data, falling back to local storage.", e);
+        }
+      }
+
+      // 2. Fallback to localStorage if offline or remote fetch empty
+      let loaded = localStorage.getItem("onair_app_state");
+      if (loaded) {
+        try {
+          appState = JSON.parse(loaded);
+          migrateStateStructure(appState);
+        } catch (e) {
+          console.error("State parse error", e);
+        }
+      }
+      render();
+    }
+
+    auth.onAuthStateChanged((user) => {
+      const loginOverlay = document.getElementById("loginOverlay");
+      if (user) {
+        loginOverlay.classList.add("hidden");
+      } else {
+        loginOverlay.classList.add("hidden");
+      }
+    });
+
     async function handleLogin(e) {
       e.preventDefault();
       const email = document.getElementById("loginEmail").value.trim();
@@ -1116,16 +1147,18 @@ auth.onAuthStateChanged((user) => {
 
       const selector = document.getElementById("showSelector");
       selector.innerHTML = "";
-      appState.shows.forEach(show => {
-        const opt = document.createElement("option");
-        opt.value = show.id;
-        const totalHrs = show.hours ? show.hours.length : 1;
-        opt.textContent = `${show.title} (${totalHrs}h)`;
-        if (show.id === appState.activeShowId) opt.selected = true;
-        selector.appendChild(opt);
-      });
+      if (appState.shows && Array.isArray(appState.shows)) {
+        appState.shows.forEach(show => {
+          const opt = document.createElement("option");
+          opt.value = show.id;
+          const totalHrs = show.hours ? show.hours.length : 1;
+          opt.textContent = `${show.title} (${totalHrs}h)`;
+          if (show.id === appState.activeShowId) opt.selected = true;
+          selector.appendChild(opt);
+        });
+      }
 
-      const currentShow = appState.shows.find(s => s.id === appState.activeShowId) || appState.shows[0];
+      const currentShow = (appState.shows || []).find(s => s.id === appState.activeShowId) || (appState.shows || [])[0];
       if (!currentShow) return;
       appState.activeShowId = currentShow.id;
       if (!currentShow.hours || currentShow.hours.length === 0) currentShow.hours = [{ title: "Hour 1", blocks: [] }];
@@ -1254,7 +1287,7 @@ auth.onAuthStateChanged((user) => {
     async function runResearchPlugin() {
       const query = document.getElementById("researchQueryInput").value.trim();
       if (!query) return;
-      const res = await fetch(`[https://api.duckduckgo.com/?q=$](https://api.duckduckgo.com/?q=$){encodeURIComponent(query)}&format=json&no_html=1`);
+      const res = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1`);
       const ddg = await res.json();
       document.getElementById("researchResults").innerHTML = `<div class="p-3 bg-zinc-900 rounded-xl text-xs text-zinc-200">${escapeHtml(ddg.AbstractText || "No overview found.")}</div>`;
     }
@@ -1316,7 +1349,6 @@ auth.onAuthStateChanged((user) => {
       const snippet = `[${label}](https://example.com)`;
       textarea.value = textarea.value.substring(0, start) + snippet + textarea.value.substring(end);
       textarea.focus();
-      // Select the URL placeholder for easy overwriting
       const urlStart = start + label.length + 3;
       const urlEnd = urlStart + 19;
       textarea.setSelectionRange(urlStart, urlEnd);
@@ -1361,42 +1393,26 @@ auth.onAuthStateChanged((user) => {
     }
 
     async function executeSync() {
-  if (labsKillswitchActive) return;
-  if (FIREBASE_ENDPOINT) {
-    try {
-      const currentUser = auth.currentUser;
-      let url = FIREBASE_ENDPOINT;
-      if (currentUser) {
-        const token = await currentUser.getIdToken();
-        url = FIREBASE_ENDPOINT.replace('.json', `.json?auth=${token}`);
+      if (labsKillswitchActive) return;
+      if (FIREBASE_ENDPOINT) {
+        try {
+          const currentUser = auth.currentUser;
+          let url = FIREBASE_ENDPOINT;
+          if (currentUser) {
+            const token = await currentUser.getIdToken();
+            url = FIREBASE_ENDPOINT.replace('.json', `.json?auth=${token}`);
+          }
+          await fetch(url, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(appState) });
+          document.getElementById("syncBadge").innerHTML = "<span>☁️ SYNCED</span>";
+        } catch (e) {
+          document.getElementById("syncBadge").innerHTML = "<span>⚠️ OFFLINE</span>";
+        }
       }
-      await fetch(url, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(appState) });
-      document.getElementById("syncBadge").innerHTML = "<span>☁️ SYNCED</span>";
-    } catch (e) {
-      document.getElementById("syncBadge").innerHTML = "<span>⚠️ OFFLINE</span>";
     }
-  }
-}
 
     async function forceSyncServer() {
       await executeSync();
     }
-
-    async function initLoad() {
-  let loaded = localStorage.getItem("onair_app_state");
-  if (loaded) {
-    try {
-      appState = JSON.parse(loaded);
-      migrateStateStructure(appState);
-    } catch (e) {
-      console.error("State parse error, fallback to default", e);
-    }
-  } else {
-    // Automatically seed default state if localStorage is empty
-    saveAndSync();
-  }
-  render();
-}
   </script>
 </body>
 </html>

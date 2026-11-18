@@ -850,68 +850,197 @@
 
     // FULL MARKDOWN SYNTAX PARSER (Fixed $2 capture group bug)
     function parseMarkdownToHtml(rawText) {
-      if (!rawText) return "";
-      let text = escapeHtml(rawText);
+  if (!rawText) return "";
 
-      // 1. Cues & Tags
-      text = text.replace(/\[([^\]]+)\]/g, '<span class="cue-tag">[$1]</span>');
-      // 2. Images & Links
-      text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />');
-      text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-indigo-400 underline">$1</a>');
-      // 3. Blockquotes
-      text = text.replace(/^>\s?(.*$)/gm, '<blockquote>$1</blockquote>');
-      // 4. Headers (Fixed group matching $1)
-      text = text.replace(/^### (.*$)/gm, '<h3 class="text-base font-bold text-indigo-400 my-2">$1</h3>');
-      text = text.replace(/^## (.*$)/gm, '<h2 class="text-lg font-bold text-zinc-100 my-2">$1</h2>');
-      text = text.replace(/^# (.*$)/gm, '<h1 class="text-xl font-bold text-zinc-100 my-3">$1</h1>');
-      // 5. Bold & Italic & Strikethrough & Code
-      text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      text = text.replace(/__(.*?)__/g, '<strong>$1</strong>');
-      text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
-      text = text.replace(/_(.*?)_/g, '<em>$1</em>');
-      text = text.replace(/~~(.*?)~~/g, '<span class="strikethrough">$1</span>');
-      text = text.replace(/&lt;u&gt;(.*?)&lt;\/u&gt;/g, '<u>$1</u>');
-      text = text.replace(/`([^`]+)`/g, '<code class="mono bg-zinc-800 px-1 py-0.5 rounded text-xs text-amber-300">$1</code>');
-      // 6. Lists
-      text = text.replace(/^\s*[-*]\s+(.*)$/gm, '<ul><li>$1</li></ul>');
-      text = text.replace(/^\s*\d+\.\s+(.*)$/gm, '<ol><li>$1</li></ol>');
+  // 1. Extract fenced code blocks first so their contents aren't parsed as Markdown
+  const codeBlocks = [];
+  let text = rawText.replace(/```([\s\S]*?)```/g, (_, code) => {
+    const idx = codeBlocks.push(`<pre class="bg-zinc-950 border border-zinc-800 rounded-lg p-3 my-2 overflow-x-auto text-xs mono text-emerald-300"><code>${escapeHtml(code.trim())}</code></pre>`) - 1;
+    return `@@CODEBLOCK_${idx}@@`;
+  });
 
-      // 7. Tables parsing
-      const lines = text.split('\n');
-      let inTable = false;
-      let tableHtml = '';
-      let processedLines = [];
+  // 2. Inline formatter (handles escaping, inline code, links, images, cues, bold/italic)
+  function formatInline(str) {
+    // Protect inline code spans before escaping HTML
+    const inlineCodes = [];
+    str = str.replace(/`([^`]+)`/g, (_, code) => {
+      const idx = inlineCodes.push(`<code class="mono bg-zinc-800 px-1.5 py-0.5 rounded text-xs text-amber-300">${escapeHtml(code)}</code>`) - 1;
+      return `@@INLINECODE_${idx}@@`;
+    });
 
-      for (let i = 0; i < lines.length; i++) {
-        let line = lines[i].trim();
-        if (line.startsWith('|') && line.endsWith('|')) {
-          if (!inTable) {
-            inTable = true;
-            tableHtml = '<div class="overflow-x-auto"><table>';
-          }
-          const cells = line.split('|').slice(1, -1).map(c => c.trim());
-          if (cells.every(c => c.match(/^[:\-\s]+$/))) continue;
-          const isHeader = !tableHtml.includes('<th>');
-          const tag = isHeader ? 'th' : 'td';
-          tableHtml += '<tr>' + cells.map(cell => `<${tag}>${cell}</${tag}>`).join('') + '</tr>';
-        } else {
-          if (inTable) {
-            inTable = false;
-            tableHtml += '</table></div>';
-            processedLines.push(tableHtml);
-            tableHtml = '';
-          }
-          processedLines.push(lines[i]);
-        }
-      }
-      if (inTable) {
-        tableHtml += '</table></div>';
-        processedLines.push(tableHtml);
-      }
+    // Protect backslash-escaped punctuation (e.g. \* \# \>)
+    const escapedChars = [];
+    str = str.replace(/\\([\\`*_{}\[\]()#+\-.!>~|])/g, (_, ch) => {
+      const idx = escapedChars.push(escapeHtml(ch)) - 1;
+      return `@@ESC_${idx}@@`;
+    });
 
-      return processedLines.join('\n').replace(/\n/g, '<br>');
+    // Escape raw HTML, while preserving explicit <u>...</u> underline tags
+    str = str.replace(/<u>([\s\S]*?)<\/u>/gi, '@@U_OPEN@@$1@@U_CLOSE@@');
+    str = escapeHtml(str);
+    str = str.replace(/@@U_OPEN@@/g, '<u>').replace(/@@U_CLOSE@@/g, '</u>');
+
+    // Images: ![alt](url "optional title")
+    str = str.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g, (_, alt, url, title) => {
+      return `<img src="${url}" alt="${alt}"${title ? ` title="${title}"` : ''} />`;
+    });
+
+    // Links: [text](url "optional title")
+    str = str.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g, (_, label, url, title) => {
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer"${title ? ` title="${title}"` : ''} class="text-indigo-400 underline hover:text-indigo-300">${label}</a>`;
+    });
+
+    // Autolinks: <https://example.com> or <user@example.com>
+    str = str.replace(/&lt;(https?:\/\/[^&\s]+)&gt;/g, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-indigo-400 underline">$1</a>');
+    str = str.replace(/&lt;([^\s@&]+@[^\s@&]+\.[^\s@&]+)&gt;/g, '<a href="mailto:$1" class="text-indigo-400 underline">$1</a>');
+
+    // Studio Cue Tags: [INTRO BED], [SFX], etc. (anything in brackets not followed by '(')
+    str = str.replace(/\[([^\]]+)\]/g, '<span class="cue-tag">[$1]</span>');
+
+    // Bold + Italic (***text*** or ___text___)
+    str = str.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+    str = str.replace(/___(.+?)___/g, '<strong><em>$1</em></strong>');
+
+    // Bold (**text** or __text__)
+    str = str.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    str = str.replace(/__(.+?)__/g, '<strong>$1</strong>');
+
+    // Italic (*text* or _text_)
+    str = str.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    str = str.replace(/(^|[\s(])_([^_]+?)_(?=[\s).,!?;:]|$)/g, '$1<em>$2</em>');
+
+    // Strikethrough (~~text~~)
+    str = str.replace(/~~(.+?)~~/g, '<span class="strikethrough">$1</span>');
+
+    // Restore protected tokens
+    str = str.replace(/@@INLINECODE_(\d+)@@/g, (_, idx) => inlineCodes[idx]);
+    str = str.replace(/@@ESC_(\d+)@@/g, (_, idx) => escapedChars[idx]);
+
+    return str;
+  }
+
+  // 3. Block-level line parser (Blockquotes, Headings, HR, Lists, Tables, Paragraphs)
+  const lines = text.split('\n');
+  let htmlOut = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // Fenced code placeholder
+    if (/^@@CODEBLOCK_\d+@@$/.test(trimmed)) {
+      htmlOut.push(trimmed.replace(/@@CODEBLOCK_(\d+)@@/, (_, idx) => codeBlocks[idx]));
+      i++;
+      continue;
     }
 
+    // Horizontal Rules (---, ***, ___)
+    if (/^([-*_])(\s*\1){2,}$/.test(trimmed) && !trimmed.startsWith('|')) {
+      htmlOut.push('<hr class="border-zinc-700 my-4" />');
+      i++;
+      continue;
+    }
+
+    // ATX Headings (# H1 through ###### H6)
+    const headingMatch = trimmed.match(/^(#{1,6})\s+(.+)$/);
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      const styles = {
+        1: 'text-2xl font-bold text-white my-3 border-b border-zinc-800 pb-1',
+        2: 'text-xl font-bold text-zinc-100 my-2.5',
+        3: 'text-lg font-bold text-indigo-400 my-2',
+        4: 'text-base font-bold text-zinc-200 my-1.5',
+        5: 'text-sm font-bold text-zinc-300 uppercase tracking-wide my-1',
+        6: 'text-xs font-bold text-zinc-400 uppercase tracking-wider my-1'
+      };
+      htmlOut.push(`<h${level} class="${styles[level]}">${formatInline(headingMatch[2])}</h${level}>`);
+      i++;
+      continue;
+    }
+
+    // Blockquotes (supports multi-line & nested >> blockquotes)
+    if (/^>\s?/.test(trimmed)) {
+      let quoteLines = [];
+      while (i < lines.length && /^>\s?/.test(lines[i].trim())) {
+        // Strip only the outermost '>' and single optional space, then recursively parse inside
+        quoteLines.push(lines[i].trim().replace(/^>\s?/, ''));
+        i++;
+      }
+      htmlOut.push(`<blockquote>${parseMarkdownToHtml(quoteLines.join('\n'))}</blockquote>`);
+      continue;
+    }
+
+    // Unordered Lists (-, *, +)
+    if (/^[-*+]\s+/.test(trimmed)) {
+      let items = [];
+      while (i < lines.length && /^[-*+]\s+/.test(lines[i].trim())) {
+        items.push(`<li>${formatInline(lines[i].trim().replace(/^[-*+]\s+/, ''))}</li>`);
+        i++;
+      }
+      htmlOut.push(`<ul class="list-disc ml-6 my-2 space-y-1">${items.join('')}</ul>`);
+      continue;
+    }
+
+    // Ordered Lists (1., 2., etc.)
+    if (/^\d+\.\s+/.test(trimmed)) {
+      let items = [];
+      while (i < lines.length && /^\d+\.\s+/.test(lines[i].trim())) {
+        items.push(`<li>${formatInline(lines[i].trim().replace(/^\d+\.\s+/, ''))}</li>`);
+        i++;
+      }
+      htmlOut.push(`<ol class="list-decimal ml-6 my-2 space-y-1">${items.join('')}</ol>`);
+      continue;
+    }
+
+    // Tables
+    if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+      let tableHtml = '<div class="overflow-x-auto my-3"><table>';
+      let isHeader = true;
+      while (i < lines.length && lines[i].trim().startsWith('|') && lines[i].trim().endsWith('|')) {
+        const cells = lines[i].trim().split('|').slice(1, -1).map(c => c.trim());
+        if (cells.every(c => /^[:\-\s]+$/.test(c))) {
+          i++;
+          continue;
+        }
+        const tag = isHeader ? 'th' : 'td';
+        tableHtml += '<tr>' + cells.map(cell => `<${tag}>${formatInline(cell)}</${tag}>`).join('') + '</tr>';
+        isHeader = false;
+        i++;
+      }
+      tableHtml += '</table></div>';
+      htmlOut.push(tableHtml);
+      continue;
+    }
+
+    // Empty line = paragraph break
+    if (trimmed === '') {
+      i++;
+      continue;
+    }
+
+    // Standard Paragraph (collects consecutive plain lines; supports trailing two-space <br>)
+    let paraLines = [];
+    while (
+      i < lines.length &&
+      lines[i].trim() !== '' &&
+      !/^#{1,6}\s+/.test(lines[i].trim()) &&
+      !/^>\s?/.test(lines[i].trim()) &&
+      !/^[-*+]\s+/.test(lines[i].trim()) &&
+      !/^\d+\.\s+/.test(lines[i].trim()) &&
+      !/^([-*_])(\s*\1){2,}$/.test(lines[i].trim()) &&
+      !(lines[i].trim().startsWith('|') && lines[i].trim().endsWith('|')) &&
+      !/^@@CODEBLOCK_\d+@@$/.test(lines[i].trim())
+    ) {
+      const hasHardBreak = / {2,}$/.test(lines[i]);
+      paraLines.push(formatInline(lines[i].trim()) + (hasHardBreak ? '<br>' : ''));
+      i++;
+    }
+    htmlOut.push(`<p class="my-1.5">${paraLines.join('<br>')}</p>`);
+  }
+
+  return htmlOut.join('');
+}
     function escapeHtml(str) {
       const div = document.createElement("div");
       div.textContent = str || "";

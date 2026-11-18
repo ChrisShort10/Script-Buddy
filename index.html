@@ -1356,15 +1356,22 @@
     }
 
     async function executeSync() {
-      if (FIREBASE_ENDPOINT) {
-        try {
-          await fetch(FIREBASE_ENDPOINT, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(appState) });
-          document.getElementById("syncBadge").innerHTML = "<span>☁️ SYNCED</span>";
-        } catch (e) {
-          document.getElementById("syncBadge").innerHTML = "<span>⚠️ OFFLINE</span>";
-        }
+  if (labsKillswitchActive) return;
+  if (FIREBASE_ENDPOINT) {
+    try {
+      const currentUser = auth.currentUser;
+      let url = FIREBASE_ENDPOINT;
+      if (currentUser) {
+        const token = await currentUser.getIdToken();
+        url = FIREBASE_ENDPOINT.replace('.json', `.json?auth=${token}`);
       }
+      await fetch(url, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(appState) });
+      document.getElementById("syncBadge").innerHTML = "<span>☁️ SYNCED</span>";
+    } catch (e) {
+      document.getElementById("syncBadge").innerHTML = "<span>⚠️ OFFLINE</span>";
     }
+  }
+}
 
     async function forceSyncServer() {
       await executeSync();

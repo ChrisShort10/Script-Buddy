@@ -51,6 +51,15 @@
       background: #18181b;
       color: #cbd5e1;
     }
+    .script-text-area blockquote {
+      border-left: 4px solid #6366f1;
+      padding-left: 12px;
+      margin: 10px 0;
+      color: #a1a1aa;
+      font-style: italic;
+    }
+    .script-text-area ul { list-style-type: disc; margin-left: 20px; }
+    .script-text-area ol { list-style-type: decimal; margin-left: 20px; }
     .script-text-area img {
       max-width: 100%;
       height: auto;
@@ -265,34 +274,6 @@
         </div>
       </div>
 
-      <!-- LAB ITEM 2: AUTO-SCROLL TELEPROMPTER PACE -->
-      <div class="bg-zinc-950 border border-zinc-800 p-4 rounded-xl space-y-3">
-        <div class="flex items-start justify-between gap-3">
-          <div class="space-y-1">
-            <div class="text-xs font-bold text-zinc-200">Auto-Scroll Teleprompter Pace (Beta)</div>
-            <p class="text-[11px] text-zinc-400">Smoothly autoscrolls the active block based on standard 145 WPM speaking cadence when prompter view is active.</p>
-          </div>
-          <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
-            <input type="checkbox" id="labsAutoScrollToggle" onchange="toggleAutoScrollPace(this.checked)" class="sr-only peer">
-            <div class="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
-          </label>
-        </div>
-      </div>
-
-      <!-- LAB ITEM 3: CLOUD SYNC THROTTLE -->
-      <div class="bg-zinc-950 border border-zinc-800 p-4 rounded-xl space-y-3">
-        <div class="flex items-start justify-between gap-3">
-          <div class="space-y-1">
-            <div class="text-xs font-bold text-zinc-200">Offline-First Batch Syncing (Experimental)</div>
-            <p class="text-[11px] text-zinc-400">Batches Firebase sync writes every 30 seconds rather than live per keystroke to save mobile data on patchy satellite connections.</p>
-          </div>
-          <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
-            <input type="checkbox" id="labsBatchSyncToggle" onchange="toggleBatchSync(this.checked)" class="sr-only peer">
-            <div class="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
-          </label>
-        </div>
-      </div>
-
       <div class="flex justify-end pt-2 border-t border-zinc-800">
         <button onclick="toggleLabsModal()" class="px-4 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-200 font-semibold">Close Labs</button>
       </div>
@@ -444,15 +425,16 @@
 
       <div class="flex flex-wrap items-center gap-1.5 bg-zinc-950 p-2 rounded-lg border border-zinc-800 text-xs">
         <span class="text-zinc-400 font-medium mr-1">Formatting:</span>
-        <button type="button" onclick="insertModalSnippet('**', '**')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded font-bold border border-zinc-700">**Bold**</button>
-        <button type="button" onclick="insertModalSnippet('*', '*')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded italic border border-zinc-700">*Italic*</button>
-        <button type="button" onclick="insertModalSnippet('<u>', '</u>')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded underline border border-zinc-700"><u>Underline</u></button>
-        <button type="button" onclick="insertModalSnippet('~~', '~~')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded line-through border border-zinc-700">~~Strike~~</button>
+        <button type="button" onclick="insertModalSnippet('**', '**')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded font-bold border border-zinc-700" title="Ctrl+B">**Bold**</button>
+        <button type="button" onclick="insertModalSnippet('*', '*')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded italic border border-zinc-700" title="Ctrl+I">*Italic*</button>
+        <button type="button" onclick="insertModalSnippet('<u>', '</u>')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded underline border border-zinc-700" title="Ctrl+U"><u>Underline</u></button>
+        <button type="button" onclick="insertModalSnippet('~~', '~~')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded line-through border border-zinc-700" title="Ctrl+S">~~Strike~~</button>
         
         <div class="h-4 w-px bg-zinc-700 mx-1"></div>
         
         <button type="button" onclick="insertModalSnippet('# ', '')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-indigo-300 rounded font-bold border border-zinc-700">H1</button>
         <button type="button" onclick="insertModalSnippet('## ', '')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-indigo-300 rounded font-bold border border-zinc-700">H2</button>
+        <button type="button" onclick="insertModalSnippet('> ', '')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded font-bold border border-zinc-700">Quote</button>
         <button type="button" onclick="insertModalSnippet('[INTRO] ', '')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-amber-300 rounded mono border border-zinc-700">[CUE]</button>
         
         <div class="h-4 w-px bg-zinc-700 mx-1"></div>
@@ -461,7 +443,7 @@
       </div>
 
       <div>
-        <textarea id="blockTextInput" rows="7" placeholder="Type or paste your script content here..." class="w-full bg-zinc-950 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-100 font-mono focus:outline-none focus:border-indigo-500"></textarea>
+        <textarea id="blockTextInput" rows="7" onkeydown="handleTextareaKeydown(event)" placeholder="Type or paste your markdown script here (Ctrl+B, Ctrl+I, Ctrl+U)..." class="w-full bg-zinc-950 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-100 font-mono focus:outline-none focus:border-indigo-500"></textarea>
       </div>
 
       <div class="flex justify-end gap-2 pt-2 border-t border-zinc-800">
@@ -489,7 +471,7 @@
             {
               title: "Hour 1",
               blocks: [
-                { id: 1, rawText: "[INTRO BED] Good morning Stanley and outer islands!\n\n| Time | Segment / Track |\n|---|---|\n| 08:05 | Local News & Weather |\n| 08:15 | 80s Retro Anthem |", blackout: false, manualSecs: null }
+                { id: 1, rawText: "[INTRO BED] Good morning Stanley and outer islands!\n\n> Breakfast broadcast & live updates\n\n| Time | Segment / Track |\n|---|---|\n| 08:05 | Local News & Weather |\n| 08:15 | 80s Retro Anthem |", blackout: false, manualSecs: null }
               ]
             }
           ]
@@ -521,12 +503,11 @@
 
     // Safe Mode / Killswitch State
     let labsKillswitchActive = false;
-    let autoScrollPaceActive = false;
     let batchSyncActive = false;
     let syncThrottleTimer = null;
 
     const firebaseConfig = {
-      apiKey: "AIzaSyClU9a-p2d-7VRuVZBRk6Fg8Ab1dgQ5HnI",
+      apiKey: "YOUR_FIREBASE_API_KEY",
       authDomain: "script-buddy-v1.firebaseapp.com",
       databaseURL: "https://script-buddy-v1-default-rtdb.firebaseio.com",
       projectId: "script-buddy-v1"
@@ -544,32 +525,19 @@
 
     function triggerMasterKillswitch() {
       labsKillswitchActive = true;
-      
-      // 1. Kill Mic VAD
       document.getElementById("labsMicVadToggle").checked = false;
       toggleMicVad(false);
 
-      // 2. Kill Auto-Scroll
-      document.getElementById("labsAutoScrollToggle").checked = false;
-      autoScrollPaceActive = false;
-
-      // 3. Kill Batch Sync
-      document.getElementById("labsBatchSyncToggle").checked = false;
-      batchSyncActive = false;
-      if (syncThrottleTimer) clearTimeout(syncThrottleTimer);
-
-      // Visual Safe Mode Indicator on Labs Nav Button
       const navBtn = document.getElementById("labsNavBtn");
       navBtn.className = "px-2.5 py-1.5 rounded bg-red-950 border border-red-700 text-[11px] text-red-300 font-bold animate-pulse";
       navBtn.textContent = "🛡️ SAFE MODE";
 
-      alert("🚨 MASTER KILLSWITCH ENGAGED:\nAll experimental lab features have been instantly terminated. Studio platform restored to stable baseline.");
+      alert("🚨 MASTER KILLSWITCH ENGAGED:\nAll experimental lab features terminated.");
       toggleLabsModal();
     }
 
     async function toggleMicVad(enabled) {
       if (labsKillswitchActive && enabled) {
-        alert("Safe Mode is active. Disable the killswitch in Labs to run experimental features.");
         document.getElementById("labsMicVadToggle").checked = false;
         return;
       }
@@ -587,10 +555,8 @@
           micAnalyser = audioContext.createAnalyser();
           micAnalyser.fftSize = 512;
           source.connect(micAnalyser);
-
           startVadLoop();
         } catch (err) {
-          alert("Microphone permission denied or unavailable.");
           document.getElementById("labsMicVadToggle").checked = false;
           micVadActive = false;
           statusBox.classList.add("hidden");
@@ -604,22 +570,6 @@
       }
     }
 
-    function toggleAutoScrollPace(enabled) {
-      if (labsKillswitchActive && enabled) {
-        document.getElementById("labsAutoScrollToggle").checked = false;
-        return;
-      }
-      autoScrollPaceActive = enabled;
-    }
-
-    function toggleBatchSync(enabled) {
-      if (labsKillswitchActive && enabled) {
-        document.getElementById("labsBatchSyncToggle").checked = false;
-        return;
-      }
-      batchSyncActive = enabled;
-    }
-
     function startVadLoop() {
       const dataArray = new Uint8Array(micAnalyser.frequencyBinCount);
       const meterBar = document.getElementById("micMeterBar");
@@ -628,11 +578,9 @@
       vadCheckInterval = setInterval(() => {
         if (!micVadActive || labsKillswitchActive || !micAnalyser) return;
         micAnalyser.getByteFrequencyData(dataArray);
-        
         let sum = 0;
         for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-        let avg = sum / dataArray.length;
-        let dbApprox = Math.round((avg / 255) * 100);
+        let dbApprox = Math.round((sum / dataArray.length / 255) * 100);
 
         meterBar.style.width = `${Math.min(100, dbApprox * 1.5)}%`;
         dbMeter.textContent = `${dbApprox}% Vol`;
@@ -799,11 +747,6 @@
 
     async function handleLogout() { await auth.signOut(); }
 
-    function loadVoices() {
-      if ('speechSynthesis' in window) cachedVoices = window.speechSynthesis.getVoices();
-    }
-    loadVoices();
-
     function adjustFontSize(delta) {
       appState.fontSize = Math.max(14, Math.min(28, (appState.fontSize || 19) + delta));
       saveAndSync();
@@ -905,18 +848,68 @@
       });
     }
 
+    // FULL MARKDOWN SYNTAX PARSER (Fixed $2 capture group bug)
     function parseMarkdownToHtml(rawText) {
       if (!rawText) return "";
       let text = escapeHtml(rawText);
+
+      // 1. Cues & Tags
       text = text.replace(/\[([^\]]+)\]/g, '<span class="cue-tag">[$1]</span>');
+      // 2. Images & Links
       text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />');
-      text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
-      text = text.replace(/~~(.*?)~~/g, '<span class="strikethrough">$1</span>');
+      text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-indigo-400 underline">$1</a>');
+      // 3. Blockquotes
+      text = text.replace(/^>\s?(.*$)/gm, '<blockquote>$1</blockquote>');
+      // 4. Headers (Fixed group matching $1)
       text = text.replace(/^### (.*$)/gm, '<h3 class="text-base font-bold text-indigo-400 my-2">$1</h3>');
-      text = text.replace(/^## (.*$)/gm, '<h2 class="text-lg font-bold text-zinc-100 my-2">$2</h2>');
+      text = text.replace(/^## (.*$)/gm, '<h2 class="text-lg font-bold text-zinc-100 my-2">$1</h2>');
       text = text.replace(/^# (.*$)/gm, '<h1 class="text-xl font-bold text-zinc-100 my-3">$1</h1>');
-      return text.replace(/\n/g, '<br>');
+      // 5. Bold & Italic & Strikethrough & Code
+      text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      text = text.replace(/__(.*?)__/g, '<strong>$1</strong>');
+      text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      text = text.replace(/_(.*?)_/g, '<em>$1</em>');
+      text = text.replace(/~~(.*?)~~/g, '<span class="strikethrough">$1</span>');
+      text = text.replace(/&lt;u&gt;(.*?)&lt;\/u&gt;/g, '<u>$1</u>');
+      text = text.replace(/`([^`]+)`/g, '<code class="mono bg-zinc-800 px-1 py-0.5 rounded text-xs text-amber-300">$1</code>');
+      // 6. Lists
+      text = text.replace(/^\s*[-*]\s+(.*)$/gm, '<ul><li>$1</li></ul>');
+      text = text.replace(/^\s*\d+\.\s+(.*)$/gm, '<ol><li>$1</li></ol>');
+
+      // 7. Tables parsing
+      const lines = text.split('\n');
+      let inTable = false;
+      let tableHtml = '';
+      let processedLines = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i].trim();
+        if (line.startsWith('|') && line.endsWith('|')) {
+          if (!inTable) {
+            inTable = true;
+            tableHtml = '<div class="overflow-x-auto"><table>';
+          }
+          const cells = line.split('|').slice(1, -1).map(c => c.trim());
+          if (cells.every(c => c.match(/^[:\-\s]+$/))) continue;
+          const isHeader = !tableHtml.includes('<th>');
+          const tag = isHeader ? 'th' : 'td';
+          tableHtml += '<tr>' + cells.map(cell => `<${tag}>${cell}</${tag}>`).join('') + '</tr>';
+        } else {
+          if (inTable) {
+            inTable = false;
+            tableHtml += '</table></div>';
+            processedLines.push(tableHtml);
+            tableHtml = '';
+          }
+          processedLines.push(lines[i]);
+        }
+      }
+      if (inTable) {
+        tableHtml += '</table></div>';
+        processedLines.push(tableHtml);
+      }
+
+      return processedLines.join('\n').replace(/\n/g, '<br>');
     }
 
     function escapeHtml(str) {
@@ -1207,6 +1200,33 @@
 
     function closeBlockModal() { document.getElementById("blockModal").classList.add("hidden"); }
 
+    function insertModalSnippet(prefix, suffix) {
+      const textarea = document.getElementById("blockTextInput");
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const val = textarea.value;
+      textarea.value = val.substring(0, start) + prefix + val.substring(start, end) + suffix + val.substring(end);
+      textarea.focus();
+      textarea.setSelectionRange(start + prefix.length, end + prefix.length);
+    }
+
+    function insertModalTableSnippet() {
+      const textarea = document.getElementById("blockTextInput");
+      const tableTmpl = "\n| Time | Segment / Track |\n|---|---|\n| 08:00 | Station ID |\n| 08:05 | Featured Track |\n";
+      textarea.value += tableTmpl;
+      textarea.focus();
+    }
+
+    // Textarea Keyboard Shortcuts (Ctrl+B, Ctrl+I, Ctrl+U, Ctrl+S)
+    function handleTextareaKeydown(e) {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'b') { e.preventDefault(); insertModalSnippet('**', '**'); }
+        else if (e.key === 'i') { e.preventDefault(); insertModalSnippet('*', '*'); }
+        else if (e.key === 'u') { e.preventDefault(); insertModalSnippet('<u>', '</u>'); }
+        else if (e.key === 's') { e.preventDefault(); insertModalSnippet('~~', '~~'); }
+      }
+    }
+
     function saveBlockModalData() {
       const rawText = document.getElementById("blockTextInput").value;
       if (!rawText.trim()) return;
@@ -1225,14 +1245,8 @@
 
     async function saveAndSync() {
       localStorage.setItem("onair_app_state", JSON.stringify(appState));
-      if (labsKillswitchActive) return; // Skip sync if killswitch triggered
-
-      if (batchSyncActive) {
-        if (syncThrottleTimer) clearTimeout(syncThrottleTimer);
-        syncThrottleTimer = setTimeout(executeSync, 30000); // Batch every 30s
-      } else {
-        executeSync();
-      }
+      if (labsKillswitchActive) return;
+      executeSync();
     }
 
     async function executeSync() {
@@ -1251,32 +1265,13 @@
     }
 
     async function initLoad() {
-  let loadedData = null;
-  if (FIREBASE_ENDPOINT) {
-    try {
-      const res = await fetch(FIREBASE_ENDPOINT + "?t=" + Date.now()); // Busts mobile browser cache
-      const data = await res.json();
-      if (data && data.shows && data.shows.length > 0) {
-        loadedData = data;
-        localStorage.setItem("onair_app_state", JSON.stringify(loadedData));
+      let loaded = localStorage.getItem("onair_app_state");
+      if (loaded) {
+        appState = JSON.parse(loaded);
+        migrateStateStructure(appState);
       }
-    } catch (e) {
-      console.warn("Cloud fetch failed, falling back to local cache:", e);
+      render();
     }
-  }
-
-  if (!loadedData) {
-    const saved = localStorage.getItem("onair_app_state");
-    if (saved) loadedData = JSON.parse(saved);
-  }
-
-  if (loadedData) {
-    const didMigrate = migrateStateStructure(loadedData);
-    appState = loadedData;
-    if (didMigrate) saveAndSync();
-  }
-  render();
-}
   </script>
 </body>
 </html>

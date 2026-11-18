@@ -712,38 +712,43 @@
       return (tmp.textContent || tmp.innerText || "").trim();
     }
 
-    // Run initialization immediately on DOM load and fetch remote DB state
+    // Run initialization immediately on DOM load
     window.addEventListener('DOMContentLoaded', () => {
       initLoad();
     });
 
     async function initLoad() {
-      // 1. Try loading directly from Firebase REST endpoint first so existing DB shows render
+      // 1. Attempt fetching remote JSON state directly from Firebase endpoint
       if (FIREBASE_ENDPOINT) {
         try {
           const res = await fetch(FIREBASE_ENDPOINT);
-          const remoteData = await res.json();
-          if (remoteData && remoteData.shows && Array.isArray(remoteData.shows)) {
-            appState = remoteData;
-            migrateStateStructure(appState);
-            localStorage.setItem("onair_app_state", JSON.stringify(appState));
-            render();
-            document.getElementById("syncBadge").innerHTML = "<span>☁️ SYNCED</span>";
-            return;
+          if (res.ok) {
+            const remoteData = await res.json();
+            if (remoteData && remoteData.shows && Array.isArray(remoteData.shows)) {
+              appState = remoteData;
+              migrateStateStructure(appState);
+              localStorage.setItem("onair_app_state", JSON.stringify(appState));
+              render();
+              document.getElementById("syncBadge").innerHTML = "<span>☁️ SYNCED</span>";
+              return;
+            }
           }
         } catch (e) {
-          console.warn("Could not fetch remote DB data, falling back to local storage.", e);
+          console.warn("Firebase remote fetch failed, falling back to local storage.", e);
         }
       }
 
-      // 2. Fallback to localStorage if offline or remote fetch empty
+      // 2. Fallback to local storage state
       let loaded = localStorage.getItem("onair_app_state");
       if (loaded) {
         try {
-          appState = JSON.parse(loaded);
-          migrateStateStructure(appState);
+          const parsed = JSON.parse(loaded);
+          if (parsed && parsed.shows && Array.isArray(parsed.shows)) {
+            appState = parsed;
+            migrateStateStructure(appState);
+          }
         } catch (e) {
-          console.error("State parse error", e);
+          console.error("Local storage parse error", e);
         }
       }
       render();

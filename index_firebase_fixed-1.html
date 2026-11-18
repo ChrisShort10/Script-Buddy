@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>OnAir Script Studio Pro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Firebase App & Auth SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Playfair+Display:ital,wght@0,600;1,400&family=Fira+Code:wght@500&display=swap" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Playfair+Display:ital,wght@0,600;1,400&family=Fira+Code:wght@500&display=swap');
+    
+    body { font-family: 'Inter', sans-serif; background-color: #09090b; color: #f4f4f5; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    
+    .hl-yellow { background: rgba(250, 204, 21, 0.35); color: #fef08a; padding: 1px 4px; border-radius: 3px; }
+    .hl-cyan { background: rgba(34, 211, 238, 0.32); color: #cffafe; padding: 1px 4px; border-radius: 3px; }
+    .hl-pink { background: rgba(244, 114, 182, 0.32); color: #fce7f3; padding: 1px 4px; border-radius: 3px; }
+    .strikethrough { text-decoration: line-through; opacity: 0.38; }
+
+    .block-blackout {
+      background: #000000 !important; border-color: #27272a !important; color: #27272a !important;
+      filter: blur(4px); user-select: none; transition: all 0.2s ease;
+    }
+    .block-blackout:hover { filter: blur(0px); color: #52525b !important; }
+
+    .cue-tag {
+      display: inline-block; background: #27272a; color: #fb923c; border: 1px solid #3f3f46;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.75em; font-weight: 700;
+      padding: 1px 7px; border-radius: 5px; margin-right: 6px; vertical-align: middle;
+    }
+
+    .script-text-area {
+      white-space: normal;
+      word-break: break-word;
+      outline: none;
+    }
+    .script-text-area table {
+      width: 100%;
+      margin: 12px 0;
+      border-collapse: collapse;
+      font-size: 0.9em;
+    }
+    .script-text-area th, .script-text-area td {
+      border: 1px solid #3f3f46;
+      padding: 8px 12px;
+      text-align: left;
+    }
+    .script-text-area th {
+      background: #18181b;
+      color: #cbd5e1;
+    }
+    .script-text-area blockquote {
+      border-left: 4px solid #6366f1;
+      background: rgba(99, 102, 241, 0.08);
+      padding: 8px 14px;
+      margin: 10px 0;
+      border-radius: 0 8px 8px 0;
+      color: #cbd5e1;
+      font-style: italic;
+    }
+    .script-text-area blockquote blockquote {
+      border-left-color: #38bdf8;
+      background: rgba(56, 189, 248, 0.08);
+      margin: 6px 0;
+    }
+    .script-text-area ul { list-style-type: disc; margin-left: 1.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+    .script-text-area ol { list-style-type: decimal; margin-left: 1.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+    .script-text-area img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      margin: 10px 0;
+      border: 1px solid #3f3f46;
+    }
+
+    #selectionToolbar {
+      position: absolute; display: none; z-index: 100;
+      background: #18181b; border: 1px solid #3f3f46; border-radius: 8px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.85);
+      padding: 6px; align-items: center; gap: 5px;
+    }
+
+    @keyframes nagFlash {
+      0%, 100% { border-color: #ef4444; background-color: rgba(239, 68, 68, 0.2); }
+      50% { border-color: #7f1d1d; background-color: rgba(127, 29, 29, 0.1); }
+    }
+    .chronometer-nag {
+      animation: nagFlash 0.8s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+
+  <!-- Login Gate Overlay -->
+  <div id="loginOverlay" class="fixed inset-0 z-50 bg-zinc-950 flex items-center justify-center p-4 hidden">
+    <div class="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-6 sm:p-8 shadow-2xl space-y-6">
+      <div class="text-center space-y-2">
+        <div class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 font-bold text-xl mb-1">🎙️</div>
+        <h1 class="text-xl font-bold text-white">OnAir Script Studio</h1>
+        <p class="text-xs text-zinc-400">Authenticate to access secure studio rundowns</p>
+      </div>
+
+      <form onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs text-zinc-400 mb-1">Studio Email</label>
+          <input id="loginEmail" type="email" required placeholder="chris@falklands.radio" class="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
+        </div>
+        <div>
+          <label class="block text-xs text-zinc-400 mb-1">Password</label>
+          <input id="loginPassword" type="password" required placeholder="••••••••" class="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
+        </div>
+        <div id="loginError" class="text-xs text-red-400 hidden"></div>
+        <button type="submit" class="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold shadow-lg shadow-indigo-600/20 transition-all">Sign In to Studio</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Floating Selection Toolbar -->
+  <div id="selectionToolbar" onmousedown="event.preventDefault()">
+    <button type="button" onclick="applyInlineStyle('hl-yellow')" class="w-6 h-6 rounded bg-yellow-400 hover:scale-110 transition-transform" title="Highlight Yellow"></button>
+    <button type="button" onclick="applyInlineStyle('hl-cyan')" class="w-6 h-6 rounded bg-cyan-400 hover:scale-110 transition-transform" title="Highlight Cyan"></button>
+    <button type="button" onclick="applyInlineStyle('hl-pink')" class="w-6 h-6 rounded bg-pink-400 hover:scale-110 transition-transform" title="Highlight Pink"></button>
+    <button type="button" onclick="applyInlineStyle('strikethrough')" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold line-through" title="Strikethrough Selection">S</button>
+    <button type="button" onclick="applyInlineStyle('font-bold')" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold" title="Bold">B</button>
+    <button type="button" onclick="applyInlineStyle('italic')" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs italic" title="Italic">I</button>
+    <button type="button" onclick="applyInlineStyle('underline')" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs underline" title="Underline">U</button>
+    <button type="button" onclick="clearSelectionFormatting()" class="px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-[11px]" title="Clear Formatting">✕</button>
+    <div class="h-4 w-px bg-zinc-700 mx-0.5"></div>
+    <button type="button" onclick="speakSelection()" class="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1" title="Pronounce in UK English">🔊 UK</button>
+    <button type="button" onclick="lookupSelectionInDock()" class="px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold flex items-center gap-1" title="Search Selection in Studio Research">🔍 Lookup</button>
+  </div>
+
+  <!-- Top SaaS Control Bar -->
+  <header class="sticky top-0 z-30 bg-zinc-950/95 backdrop-blur border-b border-zinc-800 px-3 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-2">
+      <span class="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+      <select id="showSelector" onchange="switchShow(this.value)" class="bg-zinc-900 border border-zinc-700 text-zinc-100 font-bold px-2.5 py-1.5 rounded-lg text-xs sm:text-sm focus:outline-none focus:border-indigo-500 max-w-[140px] sm:max-w-xs">
+        <!-- Populated dynamically -->
+      </select>
+      <button onclick="openShowManagerModal()" class="px-2 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-[11px] sm:text-xs text-zinc-300 font-medium">Shows</button>
+      <button onclick="forceSyncServer()" id="syncBadge" class="text-[11px] px-2.5 py-1 rounded-lg bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/60 mono transition-all flex items-center gap-1.5" title="Click to Force Sync All Data to Server">
+        <span>🔄 FORCE SYNC</span>
+      </button>
+    </div>
+
+    <!-- Backtiming & Live Stats Bar -->
+    <div class="flex items-center gap-2 sm:gap-4 text-[11px] sm:text-xs mono bg-zinc-900/80 border border-zinc-800 px-2.5 py-1.5 rounded-lg">
+      <div><span class="text-zinc-500">TOT:</span> <span id="timeTotal" class="text-zinc-200 font-bold">0m 00s</span></div>
+      <div><span class="text-zinc-500">TGT:</span> <span id="timeTarget" class="text-indigo-400 font-bold">1h</span></div>
+      <div><span class="text-zinc-500">DLT:</span> <span id="timeDelta" class="text-emerald-400 font-bold">On Pace</span></div>
+    </div>
+
+    <!-- Pro Tools & Actions -->
+    <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+      <select id="globalFontFamily" onchange="switchGlobalFont(this.value)" class="hidden sm:inline-block bg-zinc-900 border border-zinc-700 text-zinc-300 text-xs px-2 py-1.5 rounded-lg focus:outline-none focus:border-indigo-500">
+        <option value="Inter, sans-serif">Inter</option>
+        <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+        <option value="'Playfair Display', serif">Playfair Display</option>
+        <option value="'Fira Code', monospace">Fira Code</option>
+      </select>
+
+      <div class="flex items-center bg-zinc-900 border border-zinc-700 rounded-lg p-0.5 text-xs">
+        <button onclick="adjustFontSize(-1)" class="px-2 py-1 hover:bg-zinc-800 text-zinc-300 rounded font-bold" title="Decrease Font Size">A-</button>
+        <span id="fontSizeIndicator" class="px-1.5 text-zinc-400 mono text-[11px]">19px</span>
+        <button onclick="adjustFontSize(1)" class="px-2 py-1 hover:bg-zinc-800 text-zinc-300 rounded font-bold" title="Increase Font Size">A+</button>
+      </div>
+
+      <select id="layoutModeSelector" onchange="switchLayoutMode(this.value)" class="bg-zinc-900 border border-zinc-700 text-zinc-300 text-xs px-2 py-1.5 rounded-lg focus:outline-none focus:border-indigo-500">
+        <option value="standard">Standard</option>
+        <option value="teleprompter">Prompter</option>
+        <option value="compact">Compact</option>
+      </select>
+
+      <button onclick="toggleCalendarModal()" class="px-2.5 py-1.5 rounded bg-indigo-950/70 hover:bg-indigo-900/80 border border-indigo-700/70 text-xs text-indigo-300 font-semibold" title="Show Calendar">📅</button>
+      <button onclick="toggleResearchDock()" class="px-2.5 py-1.5 rounded bg-emerald-950/70 hover:bg-emerald-900/80 border border-emerald-700/70 text-xs text-emerald-300 font-semibold">🌐 Research</button>
+      <button onclick="toggleLabsModal()" id="labsNavBtn" class="px-2.5 py-1.5 rounded bg-amber-950/70 hover:bg-amber-900/80 border border-amber-700/70 text-[11px] text-amber-300 font-semibold" title="Experimental Testing Menu">🧪 Labs</button>
+      <button onclick="openBlockModal('add')" class="px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-sm">+ Block</button>
+      <button onclick="handleLogout()" class="px-2 py-1.5 rounded bg-zinc-900 hover:bg-red-950 border border-zinc-700 hover:border-red-800 text-xs text-zinc-400 hover:text-red-300" title="Sign Out">✕</button>
+    </div>
+  </header>
+
+  <!-- Main Content Workspace -->
+  <main id="mainWorkspace" class="flex-1 max-w-4xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
+    
+    <!-- Studio Voice Link Chronometer Widget -->
+    <div id="chronoCard" class="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3.5 sm:p-4 flex flex-wrap items-center justify-between gap-4 shadow-xl transition-all">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold shrink-0 text-lg">⏱</div>
+        <div>
+          <div class="text-xs font-bold text-zinc-200 flex items-center gap-2">
+            <span>Voice Link Chronometer</span>
+            <span id="chronoStatusBadge" class="text-[10px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 mono">STANDBY</span>
+          </div>
+          <div id="chronoSubText" class="text-[11px] text-zinc-400">Target limit warning configured live</div>
+        </div>
+      </div>
+
+      <!-- Chrono Display & Controls -->
+      <div class="flex items-center gap-3 flex-wrap">
+        <div class="flex items-center gap-2 bg-zinc-950 px-3 py-1.5 rounded-lg border border-zinc-800 text-xs">
+          <span class="text-zinc-500">Max Limit:</span>
+          <select id="chronoLimitSelect" class="bg-transparent text-indigo-400 font-bold focus:outline-none mono">
+            <option value="30">30s</option>
+            <option value="45">45s</option>
+            <option value="60" selected>1m 00s</option>
+            <option value="90">1m 30s</option>
+            <option value="120">2m 00s</option>
+            <option value="180">3m 00s</option>
+          </select>
+        </div>
+
+        <div id="chronoDisplay" class="text-2xl sm:text-3xl font-bold mono text-zinc-100 bg-zinc-950 px-4 py-1 rounded-xl border border-zinc-800 min-w-[110px] text-center">
+          0:00
+        </div>
+
+        <div class="flex items-center gap-1.5">
+          <button onclick="startChronometerSequence()" id="chronoStartBtn" class="px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold shadow-md flex items-center gap-1">🎙️ Go Live</button>
+          <button onclick="stopChronometer()" class="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold">Stop</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hour Subgroups Selector Bar -->
+    <div class="bg-zinc-900/80 border border-zinc-800 p-2.5 rounded-xl flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-1.5 overflow-x-auto py-1" id="hourTabsContainer">
+        <!-- Populated dynamically -->
+      </div>
+      <button onclick="addHourSubgroup()" class="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-xs text-indigo-300 font-semibold shrink-0">+ Add Hour</button>
+    </div>
+
+    <div id="blocksContainer" class="space-y-4"></div>
+  </main>
+
+  <!-- Labs Testing Menu Modal -->
+  <div id="labsModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-zinc-900 border border-zinc-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b border-zinc-800 pb-3">
+        <div>
+          <h2 class="text-base font-bold text-white flex items-center gap-2">🧪 Studio Labs (Beta Testing & Safe Mode)</h2>
+          <p class="text-xs text-zinc-400">Experimental features with instant master killswitches</p>
+        </div>
+        <button onclick="toggleLabsModal()" class="text-zinc-400 hover:text-white text-xl">&times;</button>
+      </div>
+
+      <!-- MASTER KILLSWITCH BANNER -->
+      <div class="bg-red-950/40 border border-red-800/70 p-4 rounded-xl space-y-3">
+        <div class="flex items-start justify-between gap-3">
+          <div class="space-y-1">
+            <div class="text-xs font-bold text-red-200 flex items-center gap-1.5">
+              <span>🚨 MASTER SAFE-MODE KILLSWITCH</span>
+            </div>
+            <p class="text-[11px] text-red-300/80">Instantly disables all background labs plugins, terminates microphone streams, and reverts to stable baseline studio mode.</p>
+          </div>
+          <button onclick="triggerMasterKillswitch()" class="px-3.5 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-lg shadow-red-600/30 shrink-0 transition-all">KILL ALL LABS</button>
+        </div>
+      </div>
+
+      <!-- LAB ITEM 1: MIC VAD -->
+      <div class="bg-zinc-950 border border-zinc-800 p-4 rounded-xl space-y-4">
+        <div class="flex items-start justify-between gap-3">
+          <div class="space-y-1">
+            <div class="text-xs font-bold text-zinc-200">Microphone VAD Auto-Trigger (Mobile Beta)</div>
+            <p class="text-[11px] text-zinc-400">Listens via your mobile mic to automatically start the chronometer when speech volume spikes above room noise.</p>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+            <input type="checkbox" id="labsMicVadToggle" onchange="toggleMicVad(this.checked)" class="sr-only peer">
+            <div class="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
+          </label>
+        </div>
+
+        <div id="micStatusBox" class="hidden space-y-2 pt-2 border-t border-zinc-800 text-xs">
+          <div class="flex justify-between text-zinc-400">
+            <span>Mic Signal Level:</span>
+            <span id="micDbMeter" class="mono text-amber-400 font-bold">0 dB</span>
+          </div>
+          <div class="w-full bg-zinc-900 rounded-full h-2 overflow-hidden border border-zinc-800">
+            <div id="micMeterBar" class="bg-amber-500 h-full w-0 transition-all duration-75"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-2 border-t border-zinc-800">
+        <button onclick="toggleLabsModal()" class="px-4 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-200 font-semibold">Close Labs</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Research Drawer -->
+  <div id="researchDrawer" class="fixed right-0 top-0 h-full w-full sm:w-[460px] bg-zinc-950 border-l border-zinc-800 z-40 p-4 sm:p-5 shadow-2xl transform translate-x-full transition-transform duration-200 flex flex-col">
+    <div class="flex justify-between items-center pb-3 border-b border-zinc-800">
+      <div>
+        <h3 class="font-bold text-sm text-zinc-100 flex items-center gap-2">🌐 Studio Research & Live News</h3>
+        <p class="text-[11px] text-zinc-500">Choose story depth & pull straight into active hour</p>
+      </div>
+      <button onclick="toggleResearchDock()" class="text-zinc-400 hover:text-white text-xl px-2">&times;</button>
+    </div>
+
+    <div class="mt-3 flex items-center justify-between gap-2 bg-zinc-900/80 border border-zinc-800 px-3 py-2 rounded-lg text-xs">
+      <span class="text-zinc-400 font-medium">Include Length:</span>
+      <select id="storyLengthMode" class="bg-zinc-950 border border-zinc-700 text-emerald-300 font-semibold px-2.5 py-1 rounded text-xs focus:outline-none focus:border-emerald-500">
+        <option value="brief">Headline / Brief (1–2 sentences)</option>
+        <option value="standard" selected>Standard Link (3–4 sentences)</option>
+        <option value="full">Full Story / Deep Dive</option>
+      </select>
+    </div>
+
+    <div class="grid grid-cols-4 gap-1.5 my-3 bg-zinc-900 p-1 rounded-lg border border-zinc-800 text-xs font-semibold">
+      <button id="tab_ai" onclick="switchResearchTab('ai')" class="py-1.5 rounded bg-indigo-600 text-white">AI / Web</button>
+      <button id="tab_song" onclick="switchResearchTab('song')" class="py-1.5 rounded text-zinc-400 hover:text-zinc-200">Songs</button>
+      <button id="tab_wiki" onclick="switchResearchTab('wiki')" class="py-1.5 rounded text-zinc-400 hover:text-zinc-200">Wiki</button>
+      <button id="tab_news" onclick="switchResearchTab('news')" class="py-1.5 rounded text-zinc-400 hover:text-zinc-200">News</button>
+    </div>
+
+    <div id="researchSearchBox" class="space-y-2 mb-3">
+      <div class="flex gap-2">
+        <input id="researchQueryInput" type="text" onkeydown="if(event.key==='Enter') runResearchPlugin()" placeholder="Search topic or artist..." class="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
+        <button onclick="runResearchPlugin()" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold">Search</button>
+      </div>
+    </div>
+
+    <div id="newsCategoryBox" class="hidden space-y-2 mb-3">
+      <div class="flex gap-1.5">
+        <button onclick="loadNewsFeed('general')" id="news_btn_general" class="flex-1 py-1.5 rounded bg-zinc-800 border border-zinc-700 text-xs text-zinc-200 font-semibold">World</button>
+        <button onclick="loadNewsFeed('showbiz')" id="news_btn_showbiz" class="flex-1 py-1.5 rounded bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 hover:text-zinc-200">Showbiz</button>
+        <button onclick="loadNewsFeed('music')" id="news_btn_music" class="flex-1 py-1.5 rounded bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 hover:text-zinc-200">Music</button>
+      </div>
+    </div>
+
+    <div id="researchResults" class="flex-1 overflow-y-auto space-y-3 pr-1 text-sm">
+      <div class="text-center text-zinc-500 text-xs py-10">Select a plugin tab above or highlight text and hit <strong class="text-emerald-400">🔍 Lookup</strong>.</div>
+    </div>
+  </div>
+
+  <!-- Studio Show Calendar Modal -->
+  <div id="calendarModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-zinc-900 border border-zinc-700 rounded-xl max-w-2xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] flex flex-col">
+      <div class="flex justify-between items-center border-b border-zinc-800 pb-3">
+        <div>
+          <h2 class="text-lg font-bold text-white">📅 Studio Show Calendar & Schedule</h2>
+          <p class="text-xs text-zinc-400">Track special broadcasts, guest interviews, and recurring features</p>
+        </div>
+        <button onclick="toggleCalendarModal()" class="text-zinc-400 hover:text-white text-xl">&times;</button>
+      </div>
+
+      <div class="bg-zinc-950 border border-zinc-800 p-3.5 rounded-xl space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-[11px] text-zinc-400 mb-1">Event / Show Title</label>
+            <input id="calEventTitle" type="text" placeholder="e.g., Live Session with Local Band" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
+          </div>
+          <div>
+            <label class="block text-[11px] text-zinc-400 mb-1">Date & Time</label>
+            <input id="calEventDate" type="datetime-local" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500 mono" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-[11px] text-zinc-400 mb-1">Notes / Guest Info</label>
+          <input id="calEventNotes" type="text" placeholder="Contact number, promo tracks, run-sheet details..." class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
+        </div>
+        <button onclick="addCalendarEvent()" class="w-full py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white">+ Add to Station Calendar</button>
+      </div>
+
+      <div id="calendarEventsList" class="flex-1 overflow-y-auto space-y-2 pr-1"></div>
+
+      <div class="flex justify-end pt-2 border-t border-zinc-800">
+        <button onclick="toggleCalendarModal()" class="px-4 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm text-zinc-200">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Show Manager Modal -->
+  <div id="showManagerModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-zinc-900 border border-zinc-700 rounded-xl max-w-2xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] flex flex-col">
+      <div class="flex justify-between items-center border-b border-zinc-800 pb-3">
+        <div>
+          <h2 class="text-lg font-bold text-white">Show Manager</h2>
+          <p class="text-xs text-zinc-400">Create, clone templates, or manage multi-hour shows</p>
+        </div>
+        <button onclick="closeShowManagerModal()" class="text-zinc-400 hover:text-white text-xl">&times;</button>
+      </div>
+
+      <div class="bg-zinc-950 border border-zinc-800 p-3.5 rounded-xl flex flex-wrap sm:flex-nowrap items-end gap-2.5">
+        <div class="flex-1 w-full">
+          <label class="block text-[11px] text-zinc-400 mb-1">New Show Name</label>
+          <input id="mgrNewShowName" type="text" placeholder="e.g., Saturday Weekend Warmup" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
+        </div>
+        <div class="w-28">
+          <label class="block text-[11px] text-zinc-400 mb-1">Initial Hours</label>
+          <input id="mgrNewShowHours" type="number" min="1" max="5" value="1" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
+        </div>
+        <button onclick="createShowFromManager()" class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white shrink-0">+ Create</button>
+      </div>
+
+      <div id="showManagerList" class="flex-1 overflow-y-auto space-y-2.5 pr-1"></div>
+
+      <div class="flex justify-end pt-2 border-t border-zinc-800">
+        <button onclick="closeShowManagerModal()" class="px-4 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm text-zinc-200">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add / Edit Block Modal -->
+  <div id="blockModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-zinc-900 border border-zinc-700 rounded-xl max-w-3xl w-full p-6 shadow-2xl space-y-4 max-h-[95vh] flex flex-col">
+      <div class="flex justify-between items-center border-b border-zinc-800 pb-2">
+        <h2 id="modalHeaderTitle" class="text-lg font-bold text-white">Add Script Block</h2>
+        <button onclick="closeBlockModal()" class="text-zinc-400 hover:text-white text-xl">&times;</button>
+      </div>
+
+      <!-- Manual Duration Override Controls -->
+      <div class="bg-zinc-950 p-3 rounded-lg border border-zinc-800 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-zinc-300">
+            <input type="checkbox" id="enableManualDuration" onchange="toggleManualDurationInput(this.checked)" class="rounded bg-zinc-900 border-zinc-700 text-indigo-600 focus:ring-indigo-500 h-4 w-4" />
+            <span>⏱ Set Custom Read Length (Override WPM)</span>
+          </label>
+          <span class="text-[10px] text-zinc-500">Ideal for weather PDFs or fixed audio assets</span>
+        </div>
+        <div id="manualDurationGroup" class="hidden grid grid-cols-2 gap-3 pt-1">
+          <div>
+            <label class="block text-[10px] text-zinc-400 mb-1">Minutes</label>
+            <input id="manualDurationMins" type="number" min="0" value="3" class="w-full bg-zinc-900 border border-zinc-700 rounded px-2.5 py-1 text-sm text-white mono" />
+          </div>
+          <div>
+            <label class="block text-[10px] text-zinc-400 mb-1">Seconds</label>
+            <input id="manualDurationSecs" type="number" min="0" max="59" value="0" class="w-full bg-zinc-900 border border-zinc-700 rounded px-2.5 py-1 text-sm text-white mono" />
+          </div>
+        </div>
+      </div>
+
+      <!-- COMPREHENSIVE MARKDOWN TOOLBAR -->
+      <div class="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800 space-y-2 text-xs">
+        <div class="flex flex-wrap items-center gap-1">
+          <span class="text-zinc-400 font-semibold mr-1 text-[11px]">Headings:</span>
+          <button type="button" onclick="insertModalHeading(1)" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-indigo-300 rounded font-bold border border-zinc-700">H1</button>
+          <button type="button" onclick="insertModalHeading(2)" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-indigo-300 rounded font-bold border border-zinc-700">H2</button>
+          <button type="button" onclick="insertModalHeading(3)" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-indigo-300 rounded font-bold border border-zinc-700">H3</button>
+          <button type="button" onclick="insertModalHeading(4)" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-indigo-300 rounded font-bold border border-zinc-700">H4</button>
+          <button type="button" onclick="insertModalHeading(5)" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-indigo-300 rounded font-bold border border-zinc-700">H5</button>
+          <button type="button" onclick="insertModalHeading(6)" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-indigo-300 rounded font-bold border border-zinc-700">H6</button>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-1 pt-1 border-t border-zinc-900">
+          <span class="text-zinc-400 font-semibold mr-1 text-[11px]">Formatting:</span>
+          <button type="button" onclick="insertModalSnippet('**', '**')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded font-bold border border-zinc-700" title="Ctrl+B">**Bold**</button>
+          <button type="button" onclick="insertModalSnippet('*', '*')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded italic border border-zinc-700" title="Ctrl+I">*Italic*</button>
+          <button type="button" onclick="insertModalSnippet('<u>', '</u>')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded underline border border-zinc-700" title="Ctrl+U"><u>Under</u></button>
+          <button type="button" onclick="insertModalSnippet('~~', '~~')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded line-through border border-zinc-700" title="Ctrl+S">~~Strike~~</button>
+          <button type="button" onclick="insertModalSnippet('`', '`')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-amber-300 rounded mono border border-zinc-700">`code`</button>
+          
+          <div class="h-4 w-px bg-zinc-800 mx-1"></div>
+
+          <button type="button" onclick="insertModalSnippet('> ', '')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded font-bold border border-zinc-700">Quote</button>
+          <button type="button" onclick="insertModalLink()" class="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-indigo-400 rounded font-semibold border border-zinc-700">🔗 Link</button>
+          <button type="button" onclick="insertModalSnippet('- ', '')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded border border-zinc-700">• List</button>
+          <button type="button" onclick="insertModalSnippet('1. ', '')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded border border-zinc-700">1. List</button>
+          <button type="button" onclick="insertModalTableSnippet()" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-emerald-300 rounded mono border border-zinc-700">+ Table</button>
+          <button type="button" onclick="insertModalSnippet('\n---\n', '')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 rounded border border-zinc-700">— HR</button>
+          <button type="button" onclick="insertModalSnippet('```\n', '\n```')" class="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-emerald-400 rounded mono border border-zinc-700">``` Code Block ```</button>
+          <button type="button" onclick="insertModalSnippet('[INTRO] ', '')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-amber-300 rounded mono border border-zinc-700">[CUE]</button>
+        </div>
+      </div>
+
+      <div class="flex-1">
+        <textarea id="blockTextInput" rows="9" onkeydown="handleTextareaKeydown(event)" placeholder="Type or paste markdown script here (Ctrl+B, Ctrl+I, Ctrl+U, Ctrl+S)..." class="w-full bg-zinc-950 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-100 font-mono focus:outline-none focus:border-indigo-500"></textarea>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t border-zinc-800">
+        <button onclick="closeBlockModal()" class="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm text-zinc-300">Cancel</button>
+        <button onclick="saveBlockModalData()" class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white">Save Block</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let appState = {
+      activeShowId: "show_morning",
+      activeHourIndex: 0,
+      fontSize: 19,
+      globalFont: "Inter, sans-serif",
+      layoutMode: "standard",
+      calendarEvents: [
+        { id: 1, title: "Falklands Radio Morning Live", datetime: "2026-11-14T08:00", notes: "Standard breakfast broadcast & news review" }
+      ],
+      shows: [
+        {
+          id: "show_morning",
+          title: "Live From Studio 1",
+          hours: [
+            {
+              title: "Hour 1",
+              blocks: [
+                { id: 1, rawText: "[INTRO BED] Good morning Stanley and outer islands!\n\n> Breakfast broadcast & live updates\n\n| Time | Segment / Track |\n|---|---|\n| 08:05 | Local News & Weather |\n| 08:15 | 80s Retro Anthem |", blackout: false, manualSecs: null }
+              ]
+            }
+          ]
+        }
+      ]
+    };
+
+    let editingBlockId = null;
+    let activeRange = null;
+    let savedSelectedText = "";
+
+    let chronoInterval = null;
+    let chronoSecondsElapsed = 0;
+    let chronoState = "STANDBY";
+
+    let micVadActive = false;
+    let audioContext = null;
+    let micAnalyser = null;
+    let micStream = null;
+    let vadCheckInterval = null;
+    let speechFrameCounter = 0;
+    let silenceFrameCounter = 0;
+
+    let labsKillswitchActive = false;
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyClU9a-p2d-7VRuVZBRk6Fg8Ab1dgQ5HnI",
+      authDomain: "script-buddy-v1.firebaseapp.com",
+      databaseURL: "https://script-buddy-v1-default-rtdb.firebaseio.com",
+      projectId: "script-buddy-v1"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const FIREBASE_ENDPOINT = "https://script-buddy-v1-default-rtdb.firebaseio.com/.json";
+    const WPM = 145;
+
+    function toggleLabsModal() { document.getElementById("labsModal").classList.toggle("hidden"); }
+
+    function triggerMasterKillswitch() {
+      labsKillswitchActive = true;
+      document.getElementById("labsMicVadToggle").checked = false;
+      toggleMicVad(false);
+      const navBtn = document.getElementById("labsNavBtn");
+      navBtn.className = "px-2.5 py-1.5 rounded bg-red-950 border border-red-700 text-[11px] text-red-300 font-bold animate-pulse";
+      navBtn.textContent = "🛡️ SAFE MODE";
+      alert("🚨 MASTER KILLSWITCH ENGAGED:\nAll experimental lab features terminated.");
+      toggleLabsModal();
+    }
+
+    async function toggleMicVad(enabled) {
+      if (labsKillswitchActive && enabled) {
+        document.getElementById("labsMicVadToggle").checked = false;
+        return;
+      }
+      micVadActive = enabled;
+      const statusBox = document.getElementById("micStatusBox");
+      const subText = document.getElementById("chronoSubText");
+      if (enabled) {
+        statusBox.classList.remove("hidden");
+        subText.textContent = "🎙️ Mobile VAD Mic listening active";
+        try {
+          micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const source = audioContext.createMediaStreamSource(micStream);
+          micAnalyser = audioContext.createAnalyser();
+          micAnalyser.fftSize = 512;
+          source.connect(micAnalyser);
+          startVadLoop();
+        } catch (err) {
+          document.getElementById("labsMicVadToggle").checked = false;
+          micVadActive = false;
+          statusBox.classList.add("hidden");
+        }
+      } else {
+        statusBox.classList.add("hidden");
+        subText.textContent = "Target limit warning configured live";
+        if (vadCheckInterval) clearInterval(vadCheckInterval);
+        if (micStream) micStream.getTracks().forEach(t => t.stop());
+        if (audioContext) audioContext.close();
+      }
+    }
+
+    function startVadLoop() {
+      const dataArray = new Uint8Array(micAnalyser.frequencyBinCount);
+      const meterBar = document.getElementById("micMeterBar");
+      const dbMeter = document.getElementById("micDbMeter");
+      vadCheckInterval = setInterval(() => {
+        if (!micVadActive || labsKillswitchActive || !micAnalyser) return;
+        micAnalyser.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+        let dbApprox = Math.round((sum / dataArray.length / 255) * 100);
+        meterBar.style.width = `${Math.min(100, dbApprox * 1.5)}%`;
+        dbMeter.textContent = `${dbApprox}% Vol`;
+        if (dbApprox > 22) {
+          speechFrameCounter++;
+          silenceFrameCounter = 0;
+          if (speechFrameCounter >= 4 && chronoState === "STANDBY") {
+            speechFrameCounter = 0;
+            startChronometerSequence();
+          }
+        } else {
+          silenceFrameCounter++;
+          speechFrameCounter = 0;
+        }
+      }, 100);
+    }
+
+    function startChronometerSequence() {
+      if (chronoInterval) clearInterval(chronoInterval);
+      const display = document.getElementById("chronoDisplay");
+      const statusBadge = document.getElementById("chronoStatusBadge");
+      const card = document.getElementById("chronoCard");
+      const startBtn = document.getElementById("chronoStartBtn");
+      card.classList.remove("chronometer-nag");
+      startBtn.disabled = true;
+      startBtn.classList.add("opacity-50");
+      let countdown = 3;
+      chronoState = "COUNTDOWN";
+      statusBadge.textContent = "READY IN 3...";
+      statusBadge.className = "text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 mono font-bold";
+      display.textContent = "3s";
+      chronoInterval = setInterval(() => {
+        countdown--;
+        if (countdown > 0) {
+          display.textContent = `${countdown}s`;
+        } else {
+          clearInterval(chronoInterval);
+          beginLiveChronometer();
+        }
+      }, 1000);
+    }
+
+    function beginLiveChronometer() {
+      const display = document.getElementById("chronoDisplay");
+      const statusBadge = document.getElementById("chronoStatusBadge");
+      const startBtn = document.getElementById("chronoStartBtn");
+      chronoState = "RUNNING";
+      chronoSecondsElapsed = 0;
+      statusBadge.textContent = "LIVE ON AIR";
+      statusBadge.className = "text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 mono font-bold animate-pulse";
+      display.textContent = "0:00";
+      startBtn.disabled = false;
+      startBtn.classList.remove("opacity-50");
+      const limitSecs = parseInt(document.getElementById("chronoLimitSelect").value) || 60;
+      chronoInterval = setInterval(() => {
+        chronoSecondsElapsed++;
+        display.textContent = formatTimeShort(chronoSecondsElapsed);
+        if (chronoSecondsElapsed > limitSecs && chronoState !== "WARNING") {
+          chronoState = "WARNING";
+          statusBadge.textContent = "⚠️ OVER LIMIT!";
+          statusBadge.className = "text-[10px] px-2 py-0.5 rounded bg-red-500/30 text-red-300 mono font-bold animate-bounce";
+          document.getElementById("chronoCard").classList.add("chronometer-nag");
+        }
+      }, 1000);
+    }
+
+    function stopChronometer() {
+      if (chronoInterval) clearInterval(chronoInterval);
+      chronoInterval = null;
+      chronoState = "STANDBY";
+      chronoSecondsElapsed = 0;
+      const display = document.getElementById("chronoDisplay");
+      const statusBadge = document.getElementById("chronoStatusBadge");
+      const card = document.getElementById("chronoCard");
+      const startBtn = document.getElementById("chronoStartBtn");
+      display.textContent = "0:00";
+      statusBadge.textContent = "STANDBY";
+      statusBadge.className = "text-[10px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 mono";
+      card.classList.remove("chronometer-nag");
+      startBtn.disabled = false;
+      startBtn.classList.remove("opacity-50");
+    }
+
+    function formatTimeShort(sec) {
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      return `${m}:${s < 10 ? "0" : ""}${s}`;
+    }
+
+    function migrateStateStructure(stateObj) {
+      if (!stateObj || !Array.isArray(stateObj.shows)) return false;
+      let migrated = false;
+      stateObj.shows.forEach(show => {
+        if (!Array.isArray(show.hours)) {
+          let existingBlocks = Array.isArray(show.blocks) ? show.blocks : [];
+          show.hours = [{ title: "Hour 1", blocks: existingBlocks }];
+          delete show.blocks;
+          migrated = true;
+        }
+        show.hours.forEach(hr => {
+          if (!Array.isArray(hr.blocks)) hr.blocks = [];
+          hr.blocks.forEach(block => {
+            if (block.rawText === undefined && block.html !== undefined) {
+              block.rawText = htmlToCleanText(block.html);
+              delete block.html;
+              migrated = true;
+            } else if (block.rawText === undefined) {
+              block.rawText = "";
+              migrated = true;
+            }
+            if (block.manualSecs === undefined) block.manualSecs = null;
+          });
+        });
+      });
+      if (stateObj.activeHourIndex === undefined) stateObj.activeHourIndex = 0;
+      return migrated;
+    }
+
+    function htmlToCleanText(htmlStr) {
+      if (!htmlStr) return "";
+      const tmp = document.createElement("div");
+      let normalized = htmlStr.replace(/<br\s*\/?>/gi, "\n").replace(/<\/p>/gi, "\n\n").replace(/<\/div>/gi, "\n");
+      tmp.innerHTML = normalized;
+      return (tmp.textContent || tmp.innerText || "").trim();
+    }
+
+    // Firebase REST synchronisation. Wait for Firebase Auth to resolve before
+    // attempting the first read, so authenticated database rules are respected.
+    let initialLoadComplete = false;
+    let syncInProgress = false;
+    let syncQueued = false;
+
+    function setSyncStatus(label, state = "neutral") {
+      const badge = document.getElementById("syncBadge");
+      if (!badge) return;
+      const styles = {
+        good: "bg-emerald-950 text-emerald-300 border-emerald-700/60",
+        bad: "bg-red-950 text-red-300 border-red-700/60",
+        neutral: "bg-indigo-950 text-indigo-300 border-indigo-700/60"
+      };
+      badge.className = `text-[11px] px-2.5 py-1 rounded-lg border mono transition-all flex items-center gap-1.5 ${styles[state] || styles.neutral}`;
+      badge.innerHTML = `<span>${label}</span>`;
+    }
+
+    async function firebaseUrlForCurrentUser() {
+      const user = auth.currentUser;
+      if (!user) return FIREBASE_ENDPOINT;
+      const token = await user.getIdToken();
+      const separator = FIREBASE_ENDPOINT.includes("?") ? "&" : "?";
+      return `${FIREBASE_ENDPOINT}${separator}auth=${encodeURIComponent(token)}`;
+    }
+
+    async function initLoad(user = auth.currentUser) {
+      setSyncStatus("☁️ CONNECTING…");
+      try {
+        const url = await firebaseUrlForCurrentUser();
+        const response = await fetch(url, {
+          method: "GET",
+          cache: "no-store",
+          headers: { "Accept": "application/json" }
+        });
+
+        if (!response.ok) {
+          const detail = await response.text().catch(() => "");
+          throw new Error(`Firebase read failed (${response.status}): ${detail || response.statusText}`);
+        }
+
+        const remoteData = await response.json();
+        if (remoteData && Array.isArray(remoteData.shows)) {
+          appState = remoteData;
+          migrateStateStructure(appState);
+          localStorage.setItem("onair_app_state", JSON.stringify(appState));
+          setSyncStatus("☁️ SYNCED", "good");
+        } else {
+          // Do not overwrite an empty remote database automatically.
+          const loaded = localStorage.getItem("onair_app_state");
+          if (loaded) {
+            try {
+              const parsed = JSON.parse(loaded);
+              if (parsed && Array.isArray(parsed.shows)) {
+                appState = parsed;
+                migrateStateStructure(appState);
+              }
+            } catch (error) {
+              console.error("Local storage parse error:", error);
+            }
+          }
+          setSyncStatus("☁️ CLOUD EMPTY", "neutral");
+        }
+      } catch (error) {
+        console.error("Firebase load failed:", error);
+        const loaded = localStorage.getItem("onair_app_state");
+        if (loaded) {
+          try {
+            const parsed = JSON.parse(loaded);
+            if (parsed && Array.isArray(parsed.shows)) {
+              appState = parsed;
+              migrateStateStructure(appState);
+            }
+          } catch (parseError) {
+            console.error("Local storage parse error:", parseError);
+          }
+        }
+        setSyncStatus("⚠️ LOAD FAILED", "bad");
+      } finally {
+        initialLoadComplete = true;
+        render();
+      }
+    }
+
+    auth.onAuthStateChanged(async (user) => {
+      const loginOverlay = document.getElementById("loginOverlay");
+      if (loginOverlay) loginOverlay.classList.add("hidden");
+      // Re-read after authentication changes so Firebase rules receive a fresh token.
+      await initLoad(user);
+    });
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById("loginEmail").value.trim();
+      const pass = document.getElementById("loginPassword").value;
+      const errEl = document.getElementById("loginError");
+      errEl.classList.add("hidden");
+      try {
+        await auth.signInWithEmailAndPassword(email, pass);
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove("hidden");
+      }
+    }
+
+    async function handleLogout() { await auth.signOut(); }
+
+    function adjustFontSize(delta) {
+      appState.fontSize = Math.max(14, Math.min(28, (appState.fontSize || 19) + delta));
+      saveAndSync();
+      render();
+    }
+
+    function switchGlobalFont(fontFamily) {
+      appState.globalFont = fontFamily;
+      saveAndSync();
+      render();
+    }
+
+    function switchLayoutMode(mode) {
+      appState.layoutMode = mode;
+      saveAndSync();
+      render();
+    }
+
+    function switchShow(showId) {
+      appState.activeShowId = showId;
+      appState.activeHourIndex = 0;
+      saveAndSync();
+      render();
+    }
+
+    function switchHour(hourIdx) {
+      appState.activeHourIndex = hourIdx;
+      saveAndSync();
+      render();
+    }
+
+    function addHourSubgroup() {
+      const show = appState.shows.find(s => s.id === appState.activeShowId);
+      if (!show) return;
+      if (!show.hours) show.hours = [];
+      const nextNum = show.hours.length + 1;
+      show.hours.push({ title: `Hour ${nextNum}`, blocks: [] });
+      appState.activeHourIndex = show.hours.length - 1;
+      saveAndSync();
+      render();
+    }
+
+    function removeHourSubgroup(hourIdx, event) {
+      event.stopPropagation();
+      const show = appState.shows.find(s => s.id === appState.activeShowId);
+      if (!show || !show.hours || show.hours.length <= 1) return;
+      show.hours.splice(hourIdx, 1);
+      show.hours.forEach((hr, idx) => { hr.title = `Hour ${idx + 1}`; });
+      if (appState.activeHourIndex >= show.hours.length) appState.activeHourIndex = show.hours.length - 1;
+      saveAndSync();
+      render();
+    }
+
+    function toggleCalendarModal() {
+      renderCalendarEvents();
+      document.getElementById("calendarModal").classList.toggle("hidden");
+    }
+
+    function addCalendarEvent() {
+      const title = document.getElementById("calEventTitle").value.trim();
+      const datetime = document.getElementById("calEventDate").value;
+      const notes = document.getElementById("calEventNotes").value.trim();
+      if (!title || !datetime) return;
+      if (!appState.calendarEvents) appState.calendarEvents = [];
+      appState.calendarEvents.push({ id: Date.now(), title, datetime, notes });
+      document.getElementById("calEventTitle").value = "";
+      document.getElementById("calEventDate").value = "";
+      document.getElementById("calEventNotes").value = "";
+      saveAndSync();
+      renderCalendarEvents();
+    }
+
+    function deleteCalendarEvent(id) {
+      appState.calendarEvents = (appState.calendarEvents || []).filter(e => e.id !== id);
+      saveAndSync();
+      renderCalendarEvents();
+    }
+
+    function renderCalendarEvents() {
+      const list = document.getElementById("calendarEventsList");
+      list.innerHTML = "";
+      const events = (appState.calendarEvents || []).sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+      if (events.length === 0) {
+        list.innerHTML = `<div class="text-center text-zinc-500 text-xs py-6">No scheduled shows or events logged.</div>`;
+        return;
+      }
+      events.forEach(ev => {
+        const item = document.createElement("div");
+        item.className = "p-3 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-between gap-3 text-xs";
+        item.innerHTML = `
+          <div class="space-y-1">
+            <div class="font-bold text-zinc-100">${escapeHtml(ev.title)}</div>
+            <div class="text-indigo-400 mono">📅 ${ev.datetime.replace('T', ' ')}</div>
+            ${ev.notes ? `<div class="text-zinc-400 text-[11px]">${escapeHtml(ev.notes)}</div>` : ''}
+          </div>
+          <button onclick="deleteCalendarEvent(${ev.id})" class="px-2 py-1 bg-red-950/60 text-red-400 rounded">Delete</button>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    // FULL MARKDOWN BASIC SYNTAX PARSER
+    function parseMarkdownToHtml(rawText) {
+      if (!rawText) return "";
+      const codeBlocks = [];
+      let text = rawText.replace(/```([\s\S]*?)```/g, (_, code) => {
+        const idx = codeBlocks.push(`<pre class="bg-zinc-950 border border-zinc-800 rounded-lg p-3 my-2 overflow-x-auto text-xs mono text-emerald-300"><code>${escapeHtml(code.trim())}</code></pre>`) - 1;
+        return `@@CODEBLOCK_${idx}@@`;
+      });
+
+      function formatInline(str) {
+        const inlineCodes = [];
+        str = str.replace(/`([^`]+)`/g, (_, code) => {
+          const idx = inlineCodes.push(`<code class="mono bg-zinc-800 px-1.5 py-0.5 rounded text-xs text-amber-300">${escapeHtml(code)}</code>`) - 1;
+          return `@@INLINECODE_${idx}@@`;
+        });
+
+        const escapedChars = [];
+        str = str.replace(/\\([\\`*_{}\[\]()#+\-.!>~|])/g, (_, ch) => {
+          const idx = escapedChars.push(escapeHtml(ch)) - 1;
+          return `@@ESC_${idx}@@`;
+        });
+
+        str = str.replace(/<u>([\s\S]*?)<\/u>/gi, '@@U_OPEN@@$1@@U_CLOSE@@');
+        str = escapeHtml(str);
+        str = str.replace(/@@U_OPEN@@/g, '<u>').replace(/@@U_CLOSE@@/g, '</u>');
+
+        str = str.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g, (_, alt, url, title) => {
+          return `<img src="${url}" alt="${alt}"${title ? ` title="${title}"` : ''} />`;
+        });
+        str = str.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g, (_, label, url, title) => {
+          return `<a href="${url}" target="_blank" rel="noopener noreferrer"${title ? ` title="${title}"` : ''} class="text-indigo-400 underline hover:text-indigo-300">${label}</a>`;
+        });
+        str = str.replace(/&lt;(https?:\/\/[^&\s]+)&gt;/g, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-indigo-400 underline">$1</a>');
+        str = str.replace(/&lt;([^\s@&]+@[^\s@&]+\.[^\s@&]+)&gt;/g, '<a href="mailto:$1" class="text-indigo-400 underline">$1</a>');
+        str = str.replace(/\[([^\]]+)\]/g, '<span class="cue-tag">[$1]</span>');
+        str = str.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+        str = str.replace(/___(.+?)___/g, '<strong><em>$1</em></strong>');
+        str = str.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        str = str.replace(/__(.+?)__/g, '<strong>$1</strong>');
+        str = str.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        str = str.replace(/(^|[\s(])_([^_]+?)_(?=[\s).,!?;:]|$)/g, '$1<em>$2</em>');
+        str = str.replace(/~~(.+?)~~/g, '<span class="strikethrough">$1</span>');
+
+        str = str.replace(/@@INLINECODE_(\d+)@@/g, (_, idx) => inlineCodes[idx]);
+        str = str.replace(/@@ESC_(\d+)@@/g, (_, idx) => escapedChars[idx]);
+        return str;
+      }
+
+      const lines = text.split('\n');
+      let htmlOut = [];
+      let i = 0;
+
+      while (i < lines.length) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        if (/^@@CODEBLOCK_\d+@@$/.test(trimmed)) {
+          htmlOut.push(trimmed.replace(/@@CODEBLOCK_(\d+)@@/, (_, idx) => codeBlocks[idx]));
+          i++;
+          continue;
+        }
+
+        if (/^([-*_])(\s*\1){2,}$/.test(trimmed) && !trimmed.startsWith('|')) {
+          htmlOut.push('<hr class="border-zinc-700 my-4" />');
+          i++;
+          continue;
+        }
+
+        const headingMatch = trimmed.match(/^(#{1,6})\s+(.+)$/);
+        if (headingMatch) {
+          const level = headingMatch[1].length;
+          const styles = {
+            1: 'text-2xl font-bold text-white my-3 border-b border-zinc-800 pb-1',
+            2: 'text-xl font-bold text-zinc-100 my-2.5',
+            3: 'text-lg font-bold text-indigo-400 my-2',
+            4: 'text-base font-bold text-zinc-200 my-1.5',
+            5: 'text-sm font-bold text-zinc-300 uppercase tracking-wide my-1',
+            6: 'text-xs font-bold text-zinc-400 uppercase tracking-wider my-1'
+          };
+          htmlOut.push(`<h${level} class="${styles[level]}">${formatInline(headingMatch[2])}</h${level}>`);
+          i++;
+          continue;
+        }
+
+        if (/^>\s?/.test(trimmed)) {
+          let quoteLines = [];
+          while (i < lines.length && /^>\s?/.test(lines[i].trim())) {
+            quoteLines.push(lines[i].trim().replace(/^>\s?/, ''));
+            i++;
+          }
+          htmlOut.push(`<blockquote>${parseMarkdownToHtml(quoteLines.join('\n'))}</blockquote>`);
+          continue;
+        }
+
+        if (/^[-*+]\s+/.test(trimmed)) {
+          let items = [];
+          while (i < lines.length && /^[-*+]\s+/.test(lines[i].trim())) {
+            items.push(`<li>${formatInline(lines[i].trim().replace(/^[-*+]\s+/, ''))}</li>`);
+            i++;
+          }
+          htmlOut.push(`<ul class="list-disc ml-6 my-2 space-y-1">${items.join('')}</ul>`);
+          continue;
+        }
+
+        if (/^\d+\.\s+/.test(trimmed)) {
+          let items = [];
+          while (i < lines.length && /^\d+\.\s+/.test(lines[i].trim())) {
+            items.push(`<li>${formatInline(lines[i].trim().replace(/^\d+\.\s+/, ''))}</li>`);
+            i++;
+          }
+          htmlOut.push(`<ol class="list-decimal ml-6 my-2 space-y-1">${items.join('')}</ol>`);
+          continue;
+        }
+
+        if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+          let tableHtml = '<div class="overflow-x-auto my-3"><table>';
+          let isHeader = true;
+          while (i < lines.length && lines[i].trim().startsWith('|') && lines[i].trim().endsWith('|')) {
+            const cells = lines[i].trim().split('|').slice(1, -1).map(c => c.trim());
+            if (cells.every(c => /^[:\-\s]+$/.test(c))) {
+              i++;
+              continue;
+            }
+            const tag = isHeader ? 'th' : 'td';
+            tableHtml += '<tr>' + cells.map(cell => `<${tag}>${formatInline(cell)}</${tag}>`).join('') + '</tr>';
+            isHeader = false;
+            i++;
+          }
+          tableHtml += '</table></div>';
+          htmlOut.push(tableHtml);
+          continue;
+        }
+
+        if (trimmed === '') {
+          i++;
+          continue;
+        }
+
+        let paraLines = [];
+        while (
+          i < lines.length &&
+          lines[i].trim() !== '' &&
+          !/^#{1,6}\s+/.test(lines[i].trim()) &&
+          !/^>\s?/.test(lines[i].trim()) &&
+          !/^[-*+]\s+/.test(lines[i].trim()) &&
+          !/^\d+\.\s+/.test(lines[i].trim()) &&
+          !/^([-*_])(\s*\1){2,}$/.test(lines[i].trim()) &&
+          !(lines[i].trim().startsWith('|') && lines[i].trim().endsWith('|')) &&
+          !/^@@CODEBLOCK_\d+@@$/.test(lines[i].trim())
+        ) {
+          const hasHardBreak = / {2,}$/.test(lines[i]);
+          paraLines.push(formatInline(lines[i].trim()) + (hasHardBreak ? '<br>' : ''));
+          i++;
+        }
+        htmlOut.push(`<p class="my-1.5">${paraLines.join('<br>')}</p>`);
+      }
+
+      return htmlOut.join('');
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str || "";
+      return div.innerHTML;
+    }
+
+    function stripHtmlEntities(raw) {
+      const div = document.createElement("div");
+      div.innerHTML = raw || "";
+      return (div.textContent || div.innerText || "").replace(/\s+/g, " ").trim();
+    }
+
+    function toggleBlackout(id) {
+      const show = appState.shows.find(s => s.id === appState.activeShowId);
+      if (!show || !show.hours[appState.activeHourIndex]) return;
+      const hour = show.hours[appState.activeHourIndex];
+      const b = hour.blocks.find(x => x.id === id);
+      if (b) {
+        b.blackout = !b.blackout;
+        saveAndSync();
+        render();
+      }
+    }
+
+    function updateSelectionToolbar() {
+      const toolbar = document.getElementById("selectionToolbar");
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed || !selection.toString().trim()) {
+        toolbar.style.display = "none";
+        return;
+      }
+      const range = selection.getRangeAt(0);
+      const containerNode = range.commonAncestorContainer.nodeType === Node.TEXT_NODE
+        ? range.commonAncestorContainer.parentElement
+        : range.commonAncestorContainer;
+
+      if (!containerNode || !containerNode.closest(".script-card")) {
+        toolbar.style.display = "none";
+        return;
+      }
+
+      activeRange = range.cloneRange();
+      savedSelectedText = selection.toString().trim();
+
+      const rect = range.getBoundingClientRect();
+      toolbar.style.top = `${Math.max(10, window.scrollY + rect.top - 48)}px`;
+      toolbar.style.left = `${Math.max(10, Math.min(window.innerWidth - 320, window.scrollX + rect.left + (rect.width / 2) - 150))}px`;
+      toolbar.style.display = "flex";
+    }
+
+    document.addEventListener("mouseup", () => setTimeout(updateSelectionToolbar, 10));
+    document.addEventListener("keyup", () => setTimeout(updateSelectionToolbar, 10));
+
+    function applyInlineStyle(styleClass) {
+      if (!activeRange) return;
+      const span = document.createElement("span");
+      if (styleClass === 'strikethrough') span.className = 'strikethrough';
+      else if (styleClass === 'font-bold') span.style.fontWeight = 'bold';
+      else if (styleClass === 'italic') span.style.fontStyle = 'italic';
+      else span.className = styleClass;
+
+      try {
+        span.appendChild(activeRange.extractContents());
+        activeRange.insertNode(span);
+      } catch (e) {}
+      window.getSelection().removeAllRanges();
+      activeRange = null;
+      document.getElementById("selectionToolbar").style.display = "none";
+    }
+
+    function clearSelectionFormatting() {
+      if (!activeRange) return;
+      const plain = document.createTextNode(activeRange.toString());
+      activeRange.deleteContents();
+      activeRange.insertNode(plain);
+      window.getSelection().removeAllRanges();
+      activeRange = null;
+      document.getElementById("selectionToolbar").style.display = "none";
+    }
+
+    function speakSelection() {
+      const textToSpeak = savedSelectedText || window.getSelection().toString().trim();
+      if (!textToSpeak) return;
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.lang = 'en-GB';
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+
+    function lookupSelectionInDock() {
+      const query = savedSelectedText || window.getSelection().toString().trim();
+      if (!query) return;
+      document.getElementById("selectionToolbar").style.display = "none";
+      const drawer = document.getElementById("researchDrawer");
+      if (drawer.classList.contains("translate-x-full")) toggleResearchDock();
+      document.getElementById("researchQueryInput").value = query;
+      runResearchPlugin();
+    }
+
+    function render() {
+      const fontSize = appState.fontSize || 19;
+      const globalFont = appState.globalFont || "Inter, sans-serif";
+      const layoutMode = appState.layoutMode || "standard";
+
+      document.getElementById("fontSizeIndicator").textContent = fontSize + "px";
+      document.getElementById("globalFontFamily").value = globalFont;
+      document.getElementById("layoutModeSelector").value = layoutMode;
+
+      const selector = document.getElementById("showSelector");
+      selector.innerHTML = "";
+      if (appState.shows && Array.isArray(appState.shows)) {
+        appState.shows.forEach(show => {
+          const opt = document.createElement("option");
+          opt.value = show.id;
+          const totalHrs = show.hours ? show.hours.length : 1;
+          opt.textContent = `${show.title} (${totalHrs}h)`;
+          if (show.id === appState.activeShowId) opt.selected = true;
+          selector.appendChild(opt);
+        });
+      }
+
+      const currentShow = (appState.shows || []).find(s => s.id === appState.activeShowId) || (appState.shows || [])[0];
+      if (!currentShow) return;
+      appState.activeShowId = currentShow.id;
+      if (!currentShow.hours || currentShow.hours.length === 0) currentShow.hours = [{ title: "Hour 1", blocks: [] }];
+      if (appState.activeHourIndex >= currentShow.hours.length) appState.activeHourIndex = 0;
+      const currentHour = currentShow.hours[appState.activeHourIndex];
+
+      document.getElementById("timeTarget").textContent = `${currentShow.hours.length} hr`;
+
+      const tabsContainer = document.getElementById("hourTabsContainer");
+      tabsContainer.innerHTML = "";
+      currentShow.hours.forEach((hr, idx) => {
+        const isSelected = idx === appState.activeHourIndex;
+        let hrSecs = 0;
+        (hr.blocks || []).forEach(b => {
+          if (!b.blackout) {
+            if (b.manualSecs != null) hrSecs += b.manualSecs;
+            else {
+              const raw = b.rawText || "";
+              const words = stripHtmlEntities(raw.replace(/\[[^\]]+\]/g, '')).split(/\s+/).length;
+              hrSecs += Math.round((words / WPM) * 60);
+            }
+          }
+        });
+
+        const tabBtn = document.createElement("div");
+        tabBtn.className = `px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0 flex items-center gap-2 border transition-all cursor-pointer ${
+          isSelected ? 'bg-indigo-600 border-indigo-500 text-white shadow-md' : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+        }`;
+        tabBtn.onclick = () => switchHour(idx);
+        tabBtn.innerHTML = `<span>${escapeHtml(hr.title)}</span> <span class="text-[10px] opacity-80 mono">(${formatTime(hrSecs)})</span>`;
+        if (currentShow.hours.length > 1) {
+          tabBtn.innerHTML += `<button onclick="removeHourSubgroup(${idx}, event)" class="ml-1 px-1 py-0.5 rounded text-red-300">✕</button>`;
+        }
+        tabsContainer.appendChild(tabBtn);
+      });
+
+      const container = document.getElementById("blocksContainer");
+      container.className = layoutMode === "compact" ? "space-y-2" : "space-y-4";
+      container.innerHTML = "";
+
+      let totalSecsAllHours = 0;
+      currentShow.hours.forEach(hr => {
+        (hr.blocks || []).forEach(b => {
+          if (!b.blackout) {
+            if (b.manualSecs != null) totalSecsAllHours += b.manualSecs;
+            else {
+              const words = stripHtmlEntities((b.rawText || "").replace(/\[[^\]]+\]/g, '')).split(/\s+/).length;
+              totalSecsAllHours += Math.round((words / WPM) * 60);
+            }
+          }
+        });
+      });
+
+      if (!currentHour.blocks || currentHour.blocks.length === 0) {
+        container.innerHTML = `<div class="text-center py-12 border border-dashed border-zinc-800 rounded-xl text-zinc-500 text-sm">No blocks in <strong>${escapeHtml(currentHour.title)}</strong> yet.</div>`;
+      } else {
+        currentHour.blocks.forEach((block, idx) => {
+          const raw = block.rawText || "";
+          const cleanText = stripHtmlEntities(raw.replace(/\[[^\]]+\]/g, ''));
+          const words = cleanText ? cleanText.split(/\s+/).length : 0;
+          const blockSecs = block.manualSecs != null ? block.manualSecs : Math.round((words / WPM) * 60);
+
+          const card = document.createElement("div");
+          const padClass = layoutMode === "compact" ? "p-3" : (layoutMode === "teleprompter" ? "p-6 sm:p-8 bg-zinc-950 border-indigo-500/40" : "p-4");
+          card.className = `script-card group relative rounded-xl bg-zinc-900/80 border border-zinc-800 transition-all ${padClass} ${block.blackout ? 'block-blackout' : ''}`;
+
+          card.innerHTML = `
+            <div class="flex items-start justify-between gap-3">
+              <div class="script-text-area flex-1 leading-relaxed" style="font-size: ${fontSize}px; font-family: ${globalFont};">${parseMarkdownToHtml(raw)}</div>
+              <div class="flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity shrink-0">
+                <button onclick="toggleBlackout(${block.id})" class="px-2 py-1 bg-zinc-800 text-zinc-300 rounded text-[11px]">${block.blackout ? 'Show' : 'Hide'}</button>
+                <button onclick="openBlockModal('edit', ${block.id})" class="px-2 py-1 bg-zinc-800 text-indigo-400 rounded text-[11px]">Edit</button>
+                <button onclick="moveBlock(${block.id}, -1)" class="px-1.5 py-1 bg-zinc-800 text-zinc-300 rounded text-xs">▲</button>
+                <button onclick="moveBlock(${block.id}, 1)" class="px-1.5 py-1 bg-zinc-800 text-zinc-300 rounded text-xs">▼</button>
+                <button onclick="deleteBlock(${block.id})" class="px-1.5 py-1 bg-red-950/60 text-red-400 rounded text-xs">🗑</button>
+              </div>
+            </div>
+            ${layoutMode !== 'compact' ? `<div class="mt-2.5 pt-2 border-t border-zinc-800/60 flex items-center justify-between text-[11px] mono text-zinc-500"><span>BLOCK #${idx + 1} &bull; EST. <strong class="text-zinc-400">${formatTime(blockSecs)}</strong></span></div>` : ''}
+          `;
+          container.appendChild(card);
+        });
+      }
+
+      document.getElementById("timeTotal").textContent = formatTime(totalSecsAllHours);
+    }
+
+    function formatTime(sec) {
+      if (isNaN(sec) || sec < 0) sec = 0;
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = sec % 60;
+      if (h > 0) return `${h}h ${m}m`;
+      if (m > 0) return `${m}m ${s < 10 ? "0" : ""}${s}s`;
+      return `${s}s`;
+    }
+
+    function openShowManagerModal() { document.getElementById("showManagerModal").classList.remove("hidden"); }
+    function closeShowManagerModal() { document.getElementById("showManagerModal").classList.add("hidden"); }
+
+    function createShowFromManager() {
+      const name = document.getElementById("mgrNewShowName").value.trim();
+      if (!name) return;
+      const newId = "show_" + Date.now();
+      appState.shows.push({ id: newId, title: name, hours: [{ title: "Hour 1", blocks: [] }] });
+      appState.activeShowId = newId;
+      appState.activeHourIndex = 0;
+      document.getElementById("mgrNewShowName").value = "";
+      saveAndSync();
+      render();
+      closeShowManagerModal();
+    }
+
+    function toggleResearchDock() {
+      document.getElementById("researchDrawer").classList.toggle("translate-x-full");
+    }
+
+    function switchResearchTab(tab) {
+      currentResearchTab = tab;
+      ["ai", "song", "wiki", "news"].forEach(t => {
+        document.getElementById("tab_" + t).className = t === tab ? "py-1.5 rounded bg-indigo-600 text-white" : "py-1.5 rounded text-zinc-400";
+      });
+      document.getElementById("researchSearchBox").classList.toggle("hidden", tab === "news");
+      document.getElementById("newsCategoryBox").classList.toggle("hidden", tab !== "news");
+    }
+
+    async function runResearchPlugin() {
+      const query = document.getElementById("researchQueryInput").value.trim();
+      if (!query) return;
+      const res = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1`);
+      const ddg = await res.json();
+      document.getElementById("researchResults").innerHTML = `<div class="p-3 bg-zinc-900 rounded-xl text-xs text-zinc-200">${escapeHtml(ddg.AbstractText || "No overview found.")}</div>`;
+    }
+
+    function moveBlock(id, direction) {
+      const show = appState.shows.find(s => s.id === appState.activeShowId);
+      const hour = show.hours[appState.activeHourIndex];
+      const idx = hour.blocks.findIndex(b => b.id === id);
+      if (idx + direction >= 0 && idx + direction < hour.blocks.length) {
+        const item = hour.blocks.splice(idx, 1)[0];
+        hour.blocks.splice(idx + direction, 0, item);
+        saveAndSync();
+        render();
+      }
+    }
+
+    function deleteBlock(id) {
+      const show = appState.shows.find(s => s.id === appState.activeShowId);
+      const hour = show.hours[appState.activeHourIndex];
+      hour.blocks = hour.blocks.filter(b => b.id !== id);
+      saveAndSync();
+      render();
+    }
+
+    function toggleManualDurationInput(checked) {
+      document.getElementById("manualDurationGroup").classList.toggle("hidden", !checked);
+    }
+
+    function openBlockModal(mode, id = null) {
+      editingBlockId = mode === 'edit' ? id : null;
+      document.getElementById("modalHeaderTitle").textContent = mode === 'edit' ? "Edit Block" : "Add Script Block";
+      document.getElementById("blockTextInput").value = mode === 'edit' ? appState.shows.find(s => s.id === appState.activeShowId).hours[appState.activeHourIndex].blocks.find(b => b.id === id).rawText : "";
+      document.getElementById("blockModal").classList.remove("hidden");
+    }
+
+    function closeBlockModal() { document.getElementById("blockModal").classList.add("hidden"); }
+
+    function insertModalSnippet(prefix, suffix) {
+      const textarea = document.getElementById("blockTextInput");
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const val = textarea.value;
+      textarea.value = val.substring(0, start) + prefix + val.substring(start, end) + suffix + val.substring(end);
+      textarea.focus();
+      textarea.setSelectionRange(start + prefix.length, end + prefix.length);
+    }
+
+    function insertModalHeading(level) {
+      const hashes = '#'.repeat(level);
+      insertModalSnippet(hashes + ' ', '');
+    }
+
+    function insertModalLink() {
+      const textarea = document.getElementById("blockTextInput");
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const selectedText = textarea.value.substring(start, end);
+      const label = selectedText || "Link Text";
+      const snippet = `[${label}](https://example.com)`;
+      textarea.value = textarea.value.substring(0, start) + snippet + textarea.value.substring(end);
+      textarea.focus();
+      const urlStart = start + label.length + 3;
+      const urlEnd = urlStart + 19;
+      textarea.setSelectionRange(urlStart, urlEnd);
+    }
+
+    function insertModalTableSnippet() {
+      const textarea = document.getElementById("blockTextInput");
+      const tableTmpl = "\n| Time | Segment / Track |\n|---|---|\n| 08:00 | Station ID |\n| 08:05 | Featured Track |\n";
+      textarea.value += tableTmpl;
+      textarea.focus();
+    }
+
+    function handleTextareaKeydown(e) {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'b') { e.preventDefault(); insertModalSnippet('**', '**'); }
+        else if (e.key === 'i') { e.preventDefault(); insertModalSnippet('*', '*'); }
+        else if (e.key === 'u') { e.preventDefault(); insertModalSnippet('<u>', '</u>'); }
+        else if (e.key === 's') { e.preventDefault(); insertModalSnippet('~~', '~~'); }
+      }
+    }
+
+    function saveBlockModalData() {
+      const rawText = document.getElementById("blockTextInput").value;
+      if (!rawText.trim()) return;
+      const show = appState.shows.find(s => s.id === appState.activeShowId);
+      const hour = show.hours[appState.activeHourIndex];
+      if (editingBlockId !== null) {
+        const b = hour.blocks.find(x => x.id === editingBlockId);
+        if (b) b.rawText = rawText;
+      } else {
+        hour.blocks.push({ id: Date.now(), rawText, blackout: false, manualSecs: null });
+      }
+      closeBlockModal();
+      saveAndSync();
+      render();
+    }
+
+    async function saveAndSync() {
+      localStorage.setItem("onair_app_state", JSON.stringify(appState));
+      if (labsKillswitchActive) return;
+      if (!initialLoadComplete) {
+        setSyncStatus("💾 SAVED LOCALLY", "neutral");
+        return;
+      }
+      await executeSync();
+    }
+
+    async function executeSync() {
+      if (labsKillswitchActive) return;
+      if (!initialLoadComplete) {
+        setSyncStatus("⏳ WAITING FOR LOAD", "neutral");
+        return;
+      }
+      if (syncInProgress) {
+        syncQueued = true;
+        return;
+      }
+
+      syncInProgress = true;
+      setSyncStatus("☁️ SYNCING…", "neutral");
+      try {
+        do {
+          syncQueued = false;
+          const url = await firebaseUrlForCurrentUser();
+          const response = await fetch(url, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(appState)
+          });
+
+          if (!response.ok) {
+            const detail = await response.text().catch(() => "");
+            throw new Error(`Firebase write failed (${response.status}): ${detail || response.statusText}`);
+          }
+        } while (syncQueued);
+
+        localStorage.setItem("onair_app_state", JSON.stringify(appState));
+        setSyncStatus("☁️ SYNCED", "good");
+      } catch (error) {
+        console.error("Firebase sync failed:", error);
+        setSyncStatus("⚠️ SYNC FAILED", "bad");
+      } finally {
+        syncInProgress = false;
+        if (syncQueued) executeSync();
+      }
+    }
+
+    async function forceSyncServer() {
+      await executeSync();
+    }
+  </script>
+</body>
+</html>

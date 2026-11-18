@@ -712,16 +712,21 @@
       return (tmp.textContent || tmp.innerText || "").trim();
     }
 
-    auth.onAuthStateChanged((user) => {
-      const loginOverlay = document.getElementById("loginOverlay");
-      if (user) {
-        loginOverlay.classList.add("hidden");
-        initLoad();
-      } else {
-        loginOverlay.classList.remove("hidden");
-      }
-    });
+    // Run initialization immediately on DOM load
+window.addEventListener('DOMContentLoaded', () => {
+  initLoad();
+});
 
+// Optional: Keep auth listener non-blocking
+auth.onAuthStateChanged((user) => {
+  const loginOverlay = document.getElementById("loginOverlay");
+  if (user) {
+    loginOverlay.classList.add("hidden");
+  } else {
+    // Hide login overlay by default so GitHub Pages visitors aren't blocked
+    loginOverlay.classList.add("hidden");
+  }
+});
     async function handleLogin(e) {
       e.preventDefault();
       const email = document.getElementById("loginEmail").value.trim();
@@ -1378,13 +1383,20 @@
     }
 
     async function initLoad() {
-      let loaded = localStorage.getItem("onair_app_state");
-      if (loaded) {
-        appState = JSON.parse(loaded);
-        migrateStateStructure(appState);
-      }
-      render();
+  let loaded = localStorage.getItem("onair_app_state");
+  if (loaded) {
+    try {
+      appState = JSON.parse(loaded);
+      migrateStateStructure(appState);
+    } catch (e) {
+      console.error("State parse error, fallback to default", e);
     }
+  } else {
+    // Automatically seed default state if localStorage is empty
+    saveAndSync();
+  }
+  render();
+}
   </script>
 </body>
 </html>

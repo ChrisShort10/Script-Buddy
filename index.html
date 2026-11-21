@@ -2636,6 +2636,148 @@ Are you absolutely sure?`);
     })();
     // ===== ONAIR IMAGE EDITOR MODULE: JAVASCRIPT END =====
 
+
+    // ===== ONAIR CLIPBOARD & MARKDOWN MODULE: START =====
+    (function initOaClipboardModule() {
+      const enabled = true;
+      if (!enabled) return;
+      const textarea = document.getElementById('blockTextInput');
+      if (!textarea) return;
+      let pendingPaste = null;
+      let pasteDialog = null;
+
+      function htmlToMarkdown(html) {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        doc.querySelectorAll('script,style,iframe,object,embed,form,svg,video,audio,canvas,meta,link').forEach(el => el.remove());
+        function safeUrl(value) {
+          if (!value) return '';
+          try {
+            const u = new URL(value, document.baseURI);
+            return ['http:', 'https:', 'mailto:'].includes(u.protocol) ? u.href : '';
+          } catch (_) { return ''; }
+        }
+        function render(node, listDepth = 0) {
+          if (node.nodeType === Node.TEXT_NODE) return String(node.nodeValue || '').replace(/\u00a0/g, ' ');
+          if (node.nodeType !== Node.ELEMENT_NODE) return '';
+          const tag = node.tagName.toLowerCase();
+          if (['script','style','iframe','object','embed','form','svg','video','audio','canvas'].includes(tag)) return '';
+          if (tag === 'br') return '\n';
+          if (tag === 'hr') return '\n\n---\n\n';
+          if (tag === 'img') {
+            const src = safeUrl(node.getAttribute('src'));
+            return src ? '![' + (node.getAttribute('alt') || 'Image').replace(/]/g, '\\]') + '](' + src + ')' : '';
+          }
+          if (tag === 'pre') {
+            const code = node.textContent.replace(/\n+$/, '');
+            const codeNode = node.querySelector('code');
+            const cls = codeNode ? (codeNode.className || '') : '';
+            const lang = (cls.match(/language-([a-z0-9_+-]+)/i) || [,''])[1];
+            const fence = String.fromCharCode(96).repeat(3);
+            return '\n\n' + fence + lang + '\n' + code + '\n' + fence + '\n\n';
+          }
+          if (tag === 'table') {
+            const rows = Array.from(node.querySelectorAll('tr')).map(tr =>
+              Array.from(tr.children).filter(c => ['td','th'].includes(c.tagName.toLowerCase()))
+                .map(c => render(c).replace(/\s*\n\s*/g, ' ').trim().replace(/\|/g, '\\|'))
+            ).filter(row => row.length);
+            if (!rows.length) return '';
+            const width = Math.max(...rows.map(row => row.length));
+            const normalise = row => Array.from({length:width}, (_,i) => row[i] || '');
+            const header = normalise(rows[0]);
+            const separator = Array(width).fill('---');
+            return '\n\n| ' + header.join(' | ') + ' |\n| ' + separator.join(' | ') + ' |\n' +
+              rows.slice(1).map(row => '| ' + normalise(row).join(' | ') + ' |').join('\n') + '\n\n';
+          }
+          if (tag === 'ul' || tag === 'ol') {
+            const items = Array.from(node.children).filter(c => c.tagName.toLowerCase() === 'li');
+            return '\n' + items.map((li, index) => {
+              let content = '';
+              Array.from(li.childNodes).forEach(child => {
+                if (child.nodeType === Node.ELEMENT_NODE && ['ul','ol'].includes(child.tagName.toLowerCase())) return;
+                content += render(child, listDepth + 1);
+              });
+              const marker = tag === 'ol' ? (index + 1) + '. ' : '- ';
+              const nested = Array.from(li.children).filter(c => ['ul','ol'].includes(c.tagName.toLowerCase())).map(c => render(c, listDepth + 1)).join('');
+              return '  '.repeat(listDepth) + marker + content.trim() + (nested ? '\n' + nested.trimEnd() : '');
+            }).join('\n') + '\n';
+          }
+          const inner = Array.from(node.childNodes).map(child => render(child, listDepth)).join('');
+          if (/^h[1-6]$/.test(tag)) return '\n\n' + '#'.repeat(Number(tag[1])) + ' ' + inner.trim() + '\n\n';
+          if (tag === 'strong' || tag === 'b') return inner.trim() ? '**' + inner.trim() + '**' : '';
+          if (tag === 'em' || tag === 'i') return inner.trim() ? '*' + inner.trim() + '*' : '';
+          if (tag === 'a') {
+            const href = safeUrl(node.getAttribute('href'));
+            const label = inner.trim();
+            return href && label ? '[' + label + '](' + href + ')' : inner;
+          }
+          if (tag === 'blockquote') return '\n\n' + inner.trim().split('\n').map(line => '> ' + line).join('\n') + '\n\n';
+          if (['p','div','section','article','header','footer'].includes(tag)) return '\n\n' + inner.trim() + '\n\n';
+          return inner;
+        }
+        return render(doc.body).replace(/\r/g, '').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+      }
+
+      function insertText(value) {
+        const start = pendingPaste ? pendingPaste.start : textarea.selectionStart;
+        const end = pendingPaste ? pendingPaste.end : textarea.selectionEnd;
+        textarea.focus();
+        textarea.setRangeText(value, start, end, 'end');
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        pendingPaste = null;
+      }
+      function closeDialog() {
+        if (pasteDialog) pasteDialog.remove();
+        pasteDialog = null;
+        pendingPaste = null;
+        textarea.focus();
+      }
+      function showDialog(html, plain) {
+        if (pasteDialog) pasteDialog.remove();
+        pasteDialog = document.createElement('div');
+        pasteDialog.className = 'fixed inset-0 z-[120] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4';
+        pasteDialog.setAttribute('role', 'dialog');
+        pasteDialog.setAttribute('aria-modal', 'true');
+        pasteDialog.setAttribute('aria-label', 'Paste options');
+        pasteDialog.innerHTML =
+          '<div class="w-full max-w-md rounded-xl border border-zinc-700 bg-zinc-900 p-5 shadow-2xl text-zinc-100">' +
+            '<div class="flex items-center justify-between mb-2"><h2 class="font-bold text-base">Paste options</h2>' +
+            '<button type="button" data-paste-action="close" class="text-zinc-400 hover:text-white px-2 py-1" aria-label="Close">✕</button></div>' +
+            '<p class="text-xs text-zinc-400 mb-4">Formatted content detected. Choose how to add it to your script.</p>' +
+            '<div class="grid gap-2">' +
+              '<button type="button" data-paste-action="formatted" class="text-left rounded-lg border border-indigo-500 bg-indigo-950/50 hover:bg-indigo-900/60 p-3"><strong class="block text-sm">Keep formatting</strong><span class="text-xs text-zinc-400">Convert headings, bold, links, lists and tables to Markdown.</span></button>' +
+              '<button type="button" data-paste-action="plain" class="text-left rounded-lg border border-zinc-700 hover:bg-zinc-800 p-3"><strong class="block text-sm">Plain text</strong><span class="text-xs text-zinc-400">Paste without rich formatting.</span></button>' +
+              '<button type="button" data-paste-action="markdown" class="text-left rounded-lg border border-zinc-700 hover:bg-zinc-800 p-3"><strong class="block text-sm">Use clipboard text as Markdown</strong><span class="text-xs text-zinc-400">Insert the clipboard text exactly as provided.</span></button>' +
+            '</div><p class="text-[10px] text-zinc-500 mt-3">Tip: Ctrl+Shift+V is commonly available for plain-text pasting.</p>' +
+          '</div>';
+        pasteDialog.addEventListener('click', event => {
+          if (event.target === pasteDialog) { closeDialog(); return; }
+          const button = event.target.closest('[data-paste-action]');
+          if (!button) return;
+          const action = button.dataset.pasteAction;
+          if (action === 'close') { closeDialog(); return; }
+          if (action === 'formatted') insertText(htmlToMarkdown(html));
+          else if (action === 'plain') insertText(plain.replace(/\r\n?/g, '\n'));
+          else if (action === 'markdown') insertText(plain);
+          if (pasteDialog) pasteDialog.remove();
+          pasteDialog = null;
+          textarea.focus();
+        });
+        document.body.appendChild(pasteDialog);
+      }
+
+      textarea.addEventListener('paste', event => {
+        const clipboard = event.clipboardData;
+        if (!clipboard) return;
+        const html = clipboard.getData('text/html');
+        const plain = clipboard.getData('text/plain');
+        if (!html) return;
+        event.preventDefault();
+        pendingPaste = { start: textarea.selectionStart, end: textarea.selectionEnd };
+        showDialog(html, plain);
+      });
+    })();
+    // ===== ONAIR CLIPBOARD & MARKDOWN MODULE: END =====
+
   </script>
 </body>
 </html>

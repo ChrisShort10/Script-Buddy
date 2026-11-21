@@ -101,6 +101,39 @@
     .chronometer-nag {
       animation: nagFlash 0.8s infinite ease-in-out;
     }
+
+    /* Mobile-first corrections for Android Chrome */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { width: 100%; min-width: 320px; overflow-x: hidden; }
+    body { width: 100%; min-width: 320px; overflow-x: hidden; }
+    img, video, iframe, canvas { max-width: 100%; }
+    button, input, select, textarea { max-width: 100%; }
+    button { touch-action: manipulation; }
+    .script-text-area { overflow-wrap: anywhere; }
+    .script-text-area pre { max-width: 100%; overflow-x: auto; white-space: pre; }
+    .script-text-area table { display: block; max-width: 100%; overflow-x: auto; }
+    #blockModal > div { max-height: 94dvh; overflow-y: auto; overscroll-behavior: contain; }
+    #selectionToolbar { max-width: calc(100vw - 16px); flex-wrap: wrap; }
+    @media (max-width: 700px) {
+      body { font-size: 14px; }
+      main, header, nav, section { min-width: 0; }
+      header { flex-wrap: wrap; gap: 10px; }
+      header > * { min-width: 0; }
+      .script-card { min-width: 0; padding: 12px !important; }
+      .script-card .script-text-area { min-width: 0; font-size: 16px !important; line-height: 1.65; }
+      .script-card button, #blockModal button { min-height: 38px; }
+      #blockModal { padding: 8px !important; align-items: flex-start !important; }
+      #blockModal > div { width: 100% !important; max-width: 100% !important; margin: 0 auto; padding: 14px !important; }
+      #blockTextInput { min-height: 42vh; font-size: 16px; }
+      #selectionToolbar { left: 8px !important; right: 8px; width: auto; justify-content: center; }
+      .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+      input, select, textarea { font-size: 16px !important; }
+    }
+    @media (max-width: 420px) {
+      .script-card { border-radius: 10px !important; }
+      .script-card .flex { flex-wrap: wrap; }
+      #blockModal .flex.justify-end { position: sticky; bottom: -14px; background: #09090b; padding: 12px 0; }
+    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
@@ -494,6 +527,25 @@
           <button type="button" onclick="insertModalSnippet('```\n', '\n```')" class="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-emerald-400 rounded mono border border-zinc-700">``` Code Block ```</button>
           <button type="button" onclick="insertModalSnippet('[INTRO] ', '')" class="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-amber-300 rounded mono border border-zinc-700">[CUE]</button>
         </div>
+      </div>
+
+      <div class="rounded-lg border border-indigo-900/70 bg-indigo-950/20 p-3 space-y-2">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div class="text-xs font-semibold text-indigo-200">Experimental image embed</div>
+            <p class="text-[11px] text-zinc-400">Choose a photo, upload it to your GitHub repository through your private upload endpoint, then insert it into this script.</p>
+          </div>
+          <span class="text-[10px] text-amber-300">Proxy required</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <input id="imageUploadEndpoint" type="url" placeholder="Private upload endpoint URL" class="w-full min-w-0 bg-zinc-950 border border-zinc-700 rounded px-2.5 py-2 text-xs text-white" />
+          <input id="imageAltText" type="text" placeholder="Image caption / alt text" class="w-full min-w-0 bg-zinc-950 border border-zinc-700 rounded px-2.5 py-2 text-xs text-white" />
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <input id="imageFileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="min-w-0 flex-1 text-xs text-zinc-300 file:mr-2 file:rounded file:border-0 file:bg-zinc-800 file:px-3 file:py-2 file:text-xs file:text-zinc-200" />
+          <button type="button" id="uploadImageButton" onclick="uploadAndInsertImage()" class="px-3 py-2 rounded bg-indigo-700 hover:bg-indigo-600 text-xs font-semibold text-white">Upload &amp; Insert</button>
+        </div>
+        <p id="imageUploadStatus" class="text-[11px] text-zinc-500" aria-live="polite">Endpoint contract: POST multipart/form-data with field <code>file</code>; response JSON must include <code>url</code>.</p>
       </div>
 
       <div class="flex-1">
@@ -1808,12 +1860,61 @@ Your current ${currentCount} show(s) will be backed up locally first, then repla
       document.getElementById("manualDurationGroup").classList.toggle("hidden", !checked);
     }
 
+    function setImageUploadStatus(message, isError = false) {
+      const el = document.getElementById('imageUploadStatus');
+      if (el) { el.textContent = message; el.className = `text-[11px] ${isError ? 'text-rose-300' : 'text-zinc-400'}`; }
+    }
+
+    async function uploadAndInsertImage() {
+      const endpointInput = document.getElementById('imageUploadEndpoint');
+      const fileInput = document.getElementById('imageFileInput');
+      const altInput = document.getElementById('imageAltText');
+      const button = document.getElementById('uploadImageButton');
+      const endpoint = (endpointInput?.value || '').trim();
+      const file = fileInput?.files?.[0];
+      if (!endpoint) return setImageUploadStatus('Add your private upload endpoint URL first.', true);
+      if (!file) return setImageUploadStatus('Choose an image first.', true);
+      if (!/^https:\/\//i.test(endpoint)) return setImageUploadStatus('The upload endpoint must use HTTPS.', true);
+      if (!/^image\/(png|jpeg|webp|gif)$/.test(file.type)) return setImageUploadStatus('Use PNG, JPG, WEBP or GIF.', true);
+      if (file.size > 8 * 1024 * 1024) return setImageUploadStatus('Image is too large. Maximum size is 8 MB.', true);
+      localStorage.setItem('onair_image_upload_endpoint', endpoint);
+      const form = new FormData();
+      form.append('file', file, file.name);
+      button.disabled = true;
+      button.textContent = 'Uploading…';
+      setImageUploadStatus('Uploading image to GitHub…');
+      try {
+        const signedInUser = auth?.currentUser;
+        if (!signedInUser) throw new Error('Sign in to Firebase before uploading.');
+        const idToken = await signedInUser.getIdToken();
+        const response = await fetch(endpoint, { method: 'POST', headers: { Authorization: `Bearer ${idToken}` }, body: form });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || `Upload failed (${response.status})`);
+        const imageUrl = payload.url;
+        if (!imageUrl || !/^https:\/\//i.test(imageUrl)) throw new Error('Upload endpoint did not return a valid HTTPS url.');
+        const alt = (altInput?.value || file.name.replace(/\.[^.]+$/, '')).replaceAll('[', ' ').replaceAll(']', ' ').trim() || 'Image';
+        insertModalSnippet(`![${alt}](${imageUrl})`, '');
+        setImageUploadStatus('Uploaded and inserted. Save the script block to keep the image embed.');
+        if (fileInput) fileInput.value = '';
+      } catch (error) {
+        console.error('Image upload failed:', error);
+        setImageUploadStatus(error.message || 'Image upload failed.', true);
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Upload & Insert';
+      }
+    }
+
     function openBlockModal(mode, id = null) {
       editingBlockId = mode === 'edit' ? id : null;
       const hour=getActiveHour();
       const block=mode==='edit' && hour ? hour.blocks.find(b=>b.id===id) : null;
       document.getElementById("modalHeaderTitle").textContent = mode === 'edit' ? "Edit Rundown Item" : "Add Rundown Item";
       document.getElementById("blockTextInput").value = block ? (block.rawText || '') : "";
+      document.getElementById('imageUploadEndpoint').value = localStorage.getItem('onair_image_upload_endpoint') || '';
+      document.getElementById('imageAltText').value = '';
+      document.getElementById('imageFileInput').value = '';
+      setImageUploadStatus('Endpoint contract: POST multipart/form-data with field file; JSON response must include url.');
       document.getElementById('blockTypeInput').value = block?.blockType || 'link';
       const hasManual=!!(block && block.manualSecs!=null);
       document.getElementById('enableManualDuration').checked=hasManual;

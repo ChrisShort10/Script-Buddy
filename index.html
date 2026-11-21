@@ -189,6 +189,11 @@
     .oa-image-resize-handle { display: none; position: absolute; width: 18px; height: 18px; right: -7px; bottom: -7px; border: 2px solid white; border-radius: 5px; background: #6366f1; box-shadow: 0 1px 6px #000; cursor: nwse-resize; touch-action: none; z-index: 20; }
     .oa-image-wrap.oa-selected .oa-image-resize-handle { display: block; }
     #oaImageEditorToolbar { position: fixed; z-index: 120; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(680px, calc(100vw - 20px)); max-height: min(48vh, 390px); overflow-y: auto; background: #18181b; border: 1px solid #52525b; border-radius: 14px; box-shadow: 0 16px 50px #000b; padding: 12px; display: none; }
+    #oaImageEditorToolbar .oa-image-editor-head { cursor: grab; touch-action: none; user-select: none; }
+    #oaImageEditorToolbar.oa-dragging .oa-image-editor-head { cursor: grabbing; }
+    #oaImageEditorToolbar.oa-minimised { width: min(260px, calc(100vw - 20px)); max-height: none; overflow: visible; padding: 8px 10px; }
+    #oaImageEditorToolbar.oa-minimised .oa-image-editor-body { display: none; }
+    #oaImageEditorToolbar .oa-panel-action { background: #09090b; border: 1px solid #3f3f46; color: #e4e4e7; border-radius: 7px; min-width: 30px; min-height: 30px; padding: 4px 8px; font-size: 12px; }
     #oaImageEditorToolbar.oa-open { display: block; }
     #oaImageEditorToolbar .oa-control { min-width: 0; background: #09090b; border: 1px solid #3f3f46; border-radius: 7px; color: #f4f4f5; padding: 7px 8px; font-size: 12px; }
     #oaImageEditorToolbar label { display: flex; flex-direction: column; gap: 4px; color: #a1a1aa; font-size: 10px; min-width: 0; }
@@ -660,10 +665,11 @@
 
   <!-- ===== ONAIR IMAGE EDITOR MODULE: HTML START ===== -->
   <section id="oaImageEditorToolbar" role="dialog" aria-label="Image formatting" aria-live="polite">
-    <div class="flex items-center justify-between gap-3 mb-2">
-      <div><div class="text-xs font-bold text-white">Image formatting</div><div id="oaImageEditorHint" class="text-[10px] text-zinc-400">Select an image in the reader to format it.</div></div>
-      <button type="button" id="oaImageEditorClose" class="oa-control" aria-label="Close image editor">✕</button>
+    <div id="oaImageEditorDragHandle" class="oa-image-editor-head flex items-center justify-between gap-3 mb-2">
+      <div><div class="text-xs font-bold text-white">Image formatting <span class="ml-1 text-[9px] font-normal text-zinc-500">DRAG TO MOVE</span></div><div id="oaImageEditorHint" class="text-[10px] text-zinc-400">Select an image in the reader to format it.</div></div>
+      <div class="flex items-center gap-1"><button type="button" id="oaImageEditorMinimise" class="oa-panel-action" aria-label="Minimise image editor" title="Minimise">—</button><button type="button" id="oaImageEditorClose" class="oa-control" aria-label="Close image editor">✕</button></div>
     </div>
+    <div class="oa-image-editor-body">
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
       <label>Text wrapping<select id="oaImageWrap" class="oa-control"><option value="inline">Inline</option><option value="square">Square</option><option value="tight">Tight</option><option value="through">Through</option><option value="top-bottom">Top &amp; Bottom</option></select></label>
       <label>Alignment<select id="oaImageAlign" class="oa-control"><option value="left">Left</option><option value="center">Centre</option><option value="right">Right</option></select></label>
@@ -676,6 +682,7 @@
       <div class="flex items-end"><button type="button" id="oaImageResetPosition" class="oa-control w-full">Reset position</button></div>
     </div>
     <p class="text-[10px] text-zinc-500 mt-2">Position and size snap to a 4 px grid. Drag the image to reposition it; use the corner handle to resize. Changes save with the script.</p>
+    </div>
   </section>
   <!-- ===== ONAIR IMAGE EDITOR MODULE: HTML END ===== -->
 
@@ -2386,6 +2393,7 @@ Are you absolutely sure?`);
       const activePointers = new Map();
       let gesture = null;
       let persistTimer = null;
+      let panelDrag = null;
       const toolbar = () => document.getElementById('oaImageEditorToolbar');
       const snap = value => Math.round(Number(value || 0) / SNAP) * SNAP;
       const controls = ['oaImageWrap','oaImageAlign','oaImageLayer','oaImageWidth','oaImageX','oaImageY'];
@@ -2523,6 +2531,40 @@ Are you absolutely sure?`);
         }
       }
 
+      function restorePanelPosition() {
+        const panel = toolbar(); if (!panel) return;
+        try {
+          const saved = JSON.parse(localStorage.getItem('onair_image_editor_panel_position') || 'null');
+          if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
+            panel.style.left = `${Math.max(8, Math.min(innerWidth - panel.offsetWidth - 8, saved.x))}px`;
+            panel.style.top = `${Math.max(8, Math.min(innerHeight - 54, saved.y))}px`;
+            panel.style.right = 'auto'; panel.style.bottom = 'auto'; panel.style.transform = 'none';
+          }
+        } catch (_) {}
+      }
+
+      function startPanelDrag(event) {
+        if (event.target.closest('button, input, select, label')) return;
+        const panel = toolbar(); if (!panel) return;
+        const rect = panel.getBoundingClientRect();
+        panelDrag = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, left: rect.left, top: rect.top };
+        panel.classList.add('oa-dragging');
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+        event.preventDefault();
+      }
+      function movePanelDrag(event) {
+        if (!panelDrag || panelDrag.pointerId !== event.pointerId) return;
+        const panel = toolbar(); if (!panel) return;
+        const x = Math.max(8, Math.min(innerWidth - panel.offsetWidth - 8, panelDrag.left + event.clientX - panelDrag.startX));
+        const y = Math.max(8, Math.min(innerHeight - Math.min(panel.offsetHeight, 80) - 8, panelDrag.top + event.clientY - panelDrag.startY));
+        panel.style.left = `${x}px`; panel.style.top = `${y}px`; panel.style.right = 'auto'; panel.style.bottom = 'auto'; panel.style.transform = 'none';
+      }
+      function endPanelDrag(event) {
+        if (!panelDrag || panelDrag.pointerId !== event.pointerId) return;
+        panelDrag = null; const panel = toolbar(); panel?.classList.remove('oa-dragging');
+        if (panel) { const rect = panel.getBoundingClientRect(); localStorage.setItem('onair_image_editor_panel_position', JSON.stringify({ x: rect.left, y: rect.top })); }
+      }
+
       function bind() {
         if (!enabled) return;
         const host = document.getElementById('blocksContainer');
@@ -2537,6 +2579,25 @@ Are you absolutely sure?`);
         host.addEventListener('pointerup', onPointerUp);
         host.addEventListener('pointercancel', onPointerUp);
         document.getElementById('oaImageEditorClose')?.addEventListener('click', deselect);
+        const dragHandle = document.getElementById('oaImageEditorDragHandle');
+        dragHandle?.addEventListener('pointerdown', startPanelDrag);
+        dragHandle?.addEventListener('pointermove', movePanelDrag);
+        dragHandle?.addEventListener('pointerup', endPanelDrag);
+        dragHandle?.addEventListener('pointercancel', endPanelDrag);
+        document.getElementById('oaImageEditorMinimise')?.addEventListener('click', () => {
+          const panel = toolbar(); if (!panel) return;
+          panel.classList.toggle('oa-minimised');
+          const button = document.getElementById('oaImageEditorMinimise');
+          const isMin = panel.classList.contains('oa-minimised');
+          button.textContent = isMin ? '＋' : '—'; button.title = isMin ? 'Expand' : 'Minimise';
+          button.setAttribute('aria-label', isMin ? 'Expand image editor' : 'Minimise image editor');
+        });
+        window.addEventListener('resize', () => {
+          const panel = toolbar(); if (!panel || !panel.classList.contains('oa-open') || !panel.style.top) return;
+          const rect = panel.getBoundingClientRect();
+          panel.style.left = `${Math.max(8, Math.min(innerWidth - panel.offsetWidth - 8, rect.left))}px`;
+          panel.style.top = `${Math.max(8, Math.min(innerHeight - Math.min(panel.offsetHeight, 80) - 8, rect.top))}px`;
+        });
         controls.forEach(id => {
           const el = document.getElementById(id);
           el?.addEventListener('input', () => {
@@ -2558,6 +2619,7 @@ Are you absolutely sure?`);
         document.documentElement.classList.toggle('oa-image-editor-disabled', !enabled);
         if (!enabled) { toolbar()?.classList.remove('oa-open'); return; }
         bind();
+        restorePanelPosition();
         // Add a resize handle to all rendered images, including legacy Markdown images.
         document.querySelectorAll('.script-text-area img:not(.oa-image-wrap img)').forEach(img => {
           if (img.closest('.oa-image-wrap')) return;
